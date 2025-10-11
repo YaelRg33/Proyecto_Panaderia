@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - La DesEsperanza</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="encabezado">
+        <div class="contenedor-encabezado">
+            <div class="nombre-panaderia">
+                La DesEsperanza
+                <span>Panel de Administración</span>
+            </div>
+            <nav class="navegacion-admin">
+                <button class="boton-nav" id="boton-algo">algo</button>
+                <button class="boton-nav" id="boton-algo">algo</button>
+                <button class="boton-nav" id="boton-sesion">Cerrar Sesión</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Contenedor Principal -->
+    <main class="contenedor-principal">
+        <div class="titulo-seccion">
+            <h1>Catalogo de Panes</h1>
+            <button class="boton-agregar" id="boton-agregar-principal">Agregar Nuevo Pan</button>
+        </div>
+
+        <!-- Tabla de panes -->
+        <div class="tabla-panes">
+            <table class="tabla" id="tabla-catalogo">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Descripción</th>
+                        <th>Precio</th>
+                        <th>Stock</th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpo-tabla">
+                    <tr>
+                        <td>1</td>
+                        <td>Cuernito</td>
+                        <td>Delicioso pan hojaldrado con mantequilla</td>
+                        <td class="precio">$15.00</td>
+                        <td>50</td>
+                        <td>
+                            <div class="columna-acciones">
+                                <button class="boton-editar">Editar</button>
+                                <button class="boton-eliminar">Eliminar</button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>Concha</td>
+                        <td>Pan dulce tradicional con cobertura de chocolate</td>
+                        <td class="precio">$12.00</td>
+                        <td>75</td>
+                        <td>
+                            <div class="columna-acciones">
+                                <button class="boton-editar">Editar</button>
+                                <button class="boton-eliminar">Eliminar</button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>Bolillo</td>
+                        <td>Pan blanco crujiente perfecto para tortas</td>
+                        <td class="precio">$5.00</td>
+                        <td>100</td>
+                        <td>
+                            <div class="columna-acciones">
+                                <button class="boton-editar">Editar</button>
+                                <button class="boton-eliminar">Eliminar</button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>Orejas</td>
+                        <td>Pan dulce en forma de oreja con azúcar</td>
+                        <td class="precio">$18.00</td>
+                        <td>40</td>
+                        <td>
+                            <div class="columna-acciones">
+                                <button class="boton-editar">Editar</button>
+                                <button class="boton-eliminar">Eliminar</button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>Dona</td>
+                        <td>Suaves donas con glaseado de colores</td>
+                        <td class="precio">$20.00</td>
+                        <td>60</td>
+                        <td>
+                            <div class="columna-acciones">
+                                <button class="boton-editar">Editar</button>
+                                <button class="boton-eliminar">Eliminar</button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td>Trenza</td>
+                        <td>Pan trenzado con semillas de ajonjolí</td>
+                        <td class="precio">$22.00</td>
+                        <td>35</td>
+                        <td>
+                            <div class="columna-acciones">
+                                <button class="boton-editar">Editar</button>
+                                <button class="boton-eliminar">Eliminar</button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Modal para Agregar/Editar -->
+    <div class="modal" id="modal-formulario">
+        <div class="contenido-modal">
+            <h2 class="titulo-modal" id="titulo-formulario">Agregar Nuevo Pan</h2>
+            <form class="formulario-pan" id="formulario-pan">
+                <div class="grupo-campo">
+                    <label class="etiqueta-campo" for="campo-nombre">Nombre del Pan</label>
+                    <input type="text" id="campo-nombre" class="campo-texto" placeholder="Ej: Concha" required>
+                </div>
+
+                <div class="grupo-campo">
+                    <label class="etiqueta-campo" for="campo-descripcion">Descripción</label>
+                    <textarea id="campo-descripcion" class="campo-textarea" placeholder="Descripción del pan" required></textarea>
+                </div>
+
+                <div class="grupo-campo">
+                    <label class="etiqueta-campo" for="campo-precio">Precio</label>
+                    <input type="number" id="campo-precio" class="campo-numero" placeholder="0.00" step="0.01" min="0" required>
+                </div>
+
+                <div class="grupo-campo">
+                    <label class="etiqueta-campo" for="campo-stock">Stock</label>
+                    <input type="number" id="campo-stock" class="campo-numero" placeholder="0" min="0" required>
+                </div>
+
+                <div class="botones-modal">
+                    <button type="submit" class="boton-guardar" id="boton-guardar">Guardar</button>
+                    <button type="button" class="boton-cancelar" id="boton-cancelar">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Confirmar Eliminación -->
+    <div class="modal" id="modal-eliminar">
+        <div class="contenido-modal">
+            <h2 class="titulo-modal">¿Eliminar Pan?</h2>
+            <p style="margin: 20px 0; color: #666;">¿Estás seguro de que deseas eliminar este pan? Esta acción no se puede deshacer.</p>
+            <div class="botones-modal">
+                <button class="boton-eliminar" id="confirmar-eliminar" style="flex: 1;">Eliminar</button>
+                <button class="boton-cancelar" id="cancelar-eliminar" style="flex: 1;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -135,7 +135,7 @@
             gap: 10px;
         }
 
-        .boton-editar {
+        .editarProducto {
             background-color: #4169E1;
             color: white;
             padding: 8px 15px;
@@ -146,11 +146,11 @@
             transition: background-color 0.3s;
         }
 
-        .boton-editar:hover {
+        .editarProductor:hover {
             background-color: #315bb5;
         }
 
-        .boton-eliminar {
+        .eliminarProducto {
             background-color: #DC143C;
             color: white;
             padding: 8px 15px;
@@ -161,7 +161,7 @@
             transition: background-color 0.3s;
         }
 
-        .boton-eliminar:hover {
+        .eliminarProducto:hover {
             background-color: #a51030;
         }
 

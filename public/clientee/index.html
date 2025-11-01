@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La DesEsperanza - Tienda</title>
+    <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container-header">
+            <div class="logo">
+                <h1>La DesEsperanza</h1>
+                <p>Panadería Artesanal</p>
+            </div>
+            <nav class="nav">
+                <span id="nombre-usuario" class="usuario-info"></span>
+                <button id="btn-carrito" class="btn-carrito">
+                    Carrito (No sirve)(<span id="contador-carrito">0</span>)
+                </button>
+                <button id="btn-cuenta" class="btn-cuenta">Mi Cuenta</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Filtros -->
+    <section class="filtros">
+        <div class="container">
+            <h2>Nuestros Productos</h2>
+            <div class="categorias-filtro">
+                <button class="btn-filtro active" data-categoria="todas">Todas</button>
+                <button class="btn-filtro" data-categoria="1">Pan Blanco</button>
+                <button class="btn-filtro" data-categoria="2">Pan de Dulce</button>
+                <button class="btn-filtro" data-categoria="3">Repostería</button>
+                <button class="btn-filtro" data-categoria="4">Especiales</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Productos -->
+    <section class="productos">
+        <div class="container">
+            <div id="grid-productos" class="grid-productos">
+                <!-- Los productos se cargan aquí -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Modal del Carrito -->
+    <div id="modal-carrito" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Mi Carrito</h2>
+                <button class="btn-cerrar" id="cerrar-carrito">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="items-carrito">
+                    <p class="carrito-vacio">Tu carrito está vacío</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="total-carrito">
+                    <h3>Total: $<span id="total-carrito">0.00</span></h3>
+                </div>
+                <button id="btn-finalizar" class="btn-finalizar">Finalizar Compra</button>
+                <button id="btn-vaciar" class="btn-vaciar">Vaciar Carrito</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Cuenta -->
+    <div id="modal-cuenta" class="modal">
+        <div class="modal-content modal-cuenta">
+            <div class="modal-header">
+                <h2>Mi Cuenta</h2>
+                <button class="btn-cerrar" id="cerrar-cuenta">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="info-usuario">
+                    <!-- Se llena dinámicamente -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="mainClient.js"></script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="registercss.css">
+    <title>La DesEsperanza - Registro</title>
+
+</head>
+<body>
+    <div class="container">
+        <h1>Crear Cuenta</h1>
+        <p class="subtitle">Únete a La DesEsperanza</p>
+
+        <div id="error-mensaje" class="error"></div>
+        <div id="success-mensaje" class="success"></div>
+
+        <form id="form-register">
+            <div class="form-group">
+                <label for="nombre">Nombre Completo</label>
+                <input type="text" id="nombre" name="nombre" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Correo Electrónico</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Contraseña</label>
+                <input type="password" id="password" name="password" required minlength="6">
+            </div>
+
+            <div class="form-group">
+                <label for="password-confirm">Confirmar Contraseña</label>
+                <input type="password" id="password-confirm" name="password-confirm" required minlength="6">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Registrarse</button>
+        </form>
+
+        <button onclick="irALogin()" class="btn btn-link">¿Ya tienes cuenta? Inicia sesión</button>
+    </div>
+
+    <script>
+        document.getElementById('form-register').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const nombre = document.getElementById('nombre').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const passwordConfirm = document.getElementById('password-confirm').value;
+            
+            if (password !== passwordConfirm) {
+                mostrarError('Las contraseñas no coinciden');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({nombre, email, password})
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    mostrarExito('¡Registro exitoso! Redirigiendo al login...');
+                    setTimeout(() => {
+                        window.location.href = '/login.html';
+                    }, 2000);
+                } else {
+                    mostrarError(data.error || 'Error al registrarse');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarError('Error de conexión con el servidor');
+            }
+        });
+
+        function mostrarError(mensaje) {
+            const errorDiv = document.getElementById('error-mensaje');
+            const successDiv = document.getElementById('success-mensaje');
+            
+            successDiv.style.display = 'none';
+            errorDiv.textContent = mensaje;
+            errorDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function mostrarExito(mensaje) {
+            const errorDiv = document.getElementById('error-mensaje');
+            const successDiv = document.getElementById('success-mensaje');
+            
+            errorDiv.style.display = 'none';
+            successDiv.textContent = mensaje;
+            successDiv.style.display = 'block';
+        }
+
+        function irALogin() {
+            window.location.href = '/login.html';
+        }
+    </script>
+</body>
+</html>

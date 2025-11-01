@@ -242,7 +242,28 @@
             gap: 10px;
             margin-top: 20px;
         }
-
+        .boton-editar{
+            flex: 1;
+            background-color: #2a75b6;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        .boton-eliminar{
+                        flex: 1;
+            background-color: #8b2222;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
         .boton-guardar {
             flex: 1;
             background-color: #228B22;
@@ -316,3 +337,14 @@
                 flex-direction: column;
             }
         }
+        .campo-archivo {
+    padding: 10px;
+    border: 2px dashed #ddd;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: border-color 0.3s;
+}
+
+.campo-archivo:hover {
+    border-color: #8B4513;
+}

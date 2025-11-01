@@ -26,7 +26,7 @@
     <main class="contenedor-principal">
         <div class="titulo-seccion">
             <h1>Catalogo de Panes</h1>
-            <button class="boton-agregar" id="agregarProducto">+ Agregar Nuevo Pan</button>
+            <button class="boton-agregar" id="agregarProducto">Agregar Nuevo Pan</button>
         </div>
 
         <!-- Tabla de panes -->
@@ -35,6 +35,7 @@
                 <thead>
                     <tr>
                         <th>ID</th>
+                        <th>Imagen</th>
                         <th>Nombre</th>
                         <th>Descripción</th>
                         <th>Precio</th>
@@ -53,7 +54,7 @@
     <div class="modal" id="modal-formulario">
         <div class="contenido-modal">
             <h2 class="titulo-modal" id="titulo-formulario">Agregar Nuevo Producto</h2>
-            <form class="formulario-pan" id="formulario-pan">
+            <form class="formulario-pan" id="formulario-pan" enctype="multipart/form-data">
                 <div class="grupo-campo">
                     <label class="etiqueta-campo" for="campo-nombre">Nombre del Producto</label>
                     <input type="text" id="campo-nombre" class="campo-texto" placeholder="Ej: Concha" required>
@@ -75,15 +76,20 @@
                 </div>
 
                 <div class="grupo-campo">
-                    <label class="etiqueta-campo" for="campo-img">URL de la Imagen</label>
-                    <input type="text" id="campo-img" class="campo-texto" placeholder="https://ejemplo.com/imagen.jpg">
+                    <label class="etiqueta-campo" for="campo-categoria">Categoría</label>
+                    <select id="campo-categoria" class="campo-texto" required>
+                        <option value="">Seleccionar categoría</option>
+                    </select>
                 </div>
 
                 <div class="grupo-campo">
-                    <label class="etiqueta-campo" for="campo-categoria">Categoría</label>
-                    <select id="campo-categoria" class="campo-texto">
-                        <option value="">Seleccionar categoría</option>
-                    </select>
+                    <label class="etiqueta-campo" for="campo-img">Imagen del Producto</label>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <input type="file" id="campo-img" class="campo-archivo" accept="image/*">
+                        <div id="preview-imagen" style="margin-top: 10px;">
+                            <!-- La vista previa aparecerá aquí -->
+                        </div>
+                    </div>
                 </div>
 
                 <div class="botones-modal">
@@ -106,6 +112,8 @@
         </div>
     </div>
 
-    <script src="/app.js"></script>
+    
 </body>
+<script src="admin.js"></script>
+<script src="/app.js"></script>
 </html>

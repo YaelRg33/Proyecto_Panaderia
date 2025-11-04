@@ -1,10 +1,11 @@
+// ============ ESTADO GLOBAL ============
 let productos = [];
 let categorias = [];
 let carrito = [];
 let usuarioActual = null;
 let categoriaActual = 'todas';
 
-// cargar datos
+// ============ CARGAR DATOS INICIALES ============
 async function verificarSesion() {
     try {
         const response = await fetch('/verificarSesion');
@@ -54,7 +55,7 @@ async function cargarCategorias() {
     }
 }
 
-// mostrar producots
+// ============ MOSTRAR PRODUCTOS ============
 
 function mostrarProductos() {
     const grid = document.getElementById('grid-productos');
@@ -110,7 +111,7 @@ function crearCardProducto(producto) {
     return card;
 }
 
-// carrito
+// ============ CARRITO ============
 function agregarAlCarrito(idProducto) {
     const producto = productos.find(p => p.id_producto === idProducto);
     if (!producto) return;
@@ -221,6 +222,7 @@ async function finalizarCompra() {
     
     const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
     
+    // Deshabilitar botón para evitar doble click
     const btnFinalizar = document.getElementById('btn-finalizar');
     btnFinalizar.disabled = true;
     btnFinalizar.textContent = 'Procesando...';
@@ -243,10 +245,10 @@ async function finalizarCompra() {
             const mensaje = `¡Compra finalizada exitosamente!\n\nTotal: $${total.toFixed(2)}\nNúmero de pedido: ${data.id_pedido}\n\n¡Gracias por tu compra, ${usuarioActual.nombre}!`;
             alert(mensaje);
             
-            // Limpiar el carrito y recargar productos
+            // Limpiar carrito y recargar productos
             carrito = [];
             actualizarCarrito();
-            await cargarProductos(); 
+            await cargarProductos(); // Recargar para ver stock actualizado
             document.getElementById('modal-carrito').classList.remove('active');
         } else {
             alert('Error al procesar la compra: ' + data.error);
@@ -260,9 +262,10 @@ async function finalizarCompra() {
     }
 }
 
-// filtros
+// ============ FILTROS ============
 function aplicarFiltro(categoria) {
     categoriaActual = categoria;
+    // Actualizar botones activos
     document.querySelectorAll('.btn-filtro').forEach(btn => {
         btn.classList.remove('active');
     });
@@ -270,7 +273,7 @@ function aplicarFiltro(categoria) {
     mostrarProductos();
 }
 
-// modales
+// ============ MODALES ============
 function abrirModalCarrito() {
     mostrarItemsCarrito();
     document.getElementById('modal-carrito').classList.add('active');
@@ -310,6 +313,8 @@ function cerrarModalCuenta() {
     document.getElementById('modal-cuenta').classList.remove('active');
 }
 
+// ============ NAVEGACIÓN ============
+
 function irALogin() {
     window.location.href = '/login.html';
 }
@@ -331,7 +336,9 @@ async function cerrarSesion() {
     }
 }
 
+// ============ UTILIDADES ============
 function mostrarNotificacion(mensaje) {
+    // Crear notificación temporal
     const notif = document.createElement('div');
     notif.style.cssText = `
         position: fixed;
@@ -353,6 +360,7 @@ function mostrarNotificacion(mensaje) {
     }, 2000);
 }
 
+// Agregar animaciones CSS
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideIn {
@@ -379,6 +387,7 @@ style.textContent = `
 
 document.head.appendChild(style);
 
+// ============ INICIALIZAR ============
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Tienda cargada');
 

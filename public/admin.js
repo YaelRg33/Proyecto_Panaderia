@@ -1,4 +1,4 @@
-//autentificacion
+// ============ AUTENTICACIÓN ============
 
 async function verificarAutenticacion() {
     try {
@@ -24,9 +24,9 @@ async function verificarAutenticacion() {
     }
 }
 function irAPedidos() {
-    window.location.href = '/pedidos.html';
+    window.location.href = '/pedidos.html';
 }
-// categorias
+// ============ CATEGORÍAS ============
 
 function cargarCategorias() {
     console.log('Intentando cargar categorías...');
@@ -57,7 +57,7 @@ function cargarCategorias() {
         });
 }
 
-// productos
+// ============ PRODUCTOS ============
 
 function agregarFilaTabla(producto) {
     let cuerpoTabla = document.getElementById('cuerpo-tabla');
@@ -241,10 +241,12 @@ function mostrarPreviewImagen(input) {
     }
 }
 
+// ============ INICIALIZAR ============
+
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DOM cargado');
     
-    // Verificar autenticacion
+    // Verificar autenticación primero
     const autenticado = await verificarAutenticacion();
     if (!autenticado) return;
     

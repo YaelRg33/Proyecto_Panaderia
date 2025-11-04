@@ -1,4 +1,4 @@
-// autentificacion
+// ============ AUTENTICACIÓN ============
 
 async function verificarAutenticacion() {
     try {
@@ -23,7 +23,7 @@ async function verificarAutenticacion() {
     }
 }
 
-// cargar pedidos
+// ============ CARGAR PEDIDOS ============
 
 async function cargarPedidos() {
     try {
@@ -37,6 +37,7 @@ async function cargarPedidos() {
         document.getElementById('tabla-pedidos').innerHTML = `
             <tr>
                 <td colspan="7" class="empty-state">
+                    <div>⚠️</div>
                     <p>Error al cargar los pedidos</p>
                 </td>
             </tr>
@@ -51,6 +52,7 @@ function mostrarPedidos(pedidos) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="7" class="empty-state">
+                    <div>📦</div>
                     <p>No hay pedidos registrados</p>
                 </td>
             </tr>
@@ -112,7 +114,7 @@ function actualizarEstadisticas(pedidos) {
     document.getElementById('stat-ingresos').textContent = `$${ingresos.toFixed(2)}`;
 }
 
-// detalles
+// ============ VER DETALLE ============
 
 async function verDetalle(idPedido) {
     try {
@@ -195,6 +197,7 @@ async function verDetalle(idPedido) {
         
         document.getElementById('total-pedido').textContent = `$${parseFloat(pedido.total).toFixed(2)}`;
         
+        // Abrir modal
         document.getElementById('modal-detalle').classList.add('active');
         
     } catch (error) {
@@ -206,6 +209,8 @@ async function verDetalle(idPedido) {
 function cerrarModal() {
     document.getElementById('modal-detalle').classList.remove('active');
 }
+
+// ============ CAMBIAR ESTADO ============
 
 async function cambiarEstado(idPedido, nuevoEstado) {
     try {
@@ -221,10 +226,10 @@ async function cambiarEstado(idPedido, nuevoEstado) {
         
         if (response.ok) {
             mostrarNotificacion('Estado actualizado correctamente');
-            cargarPedidos(); 
+            cargarPedidos(); // Recargar para actualizar estadísticas
         } else {
             alert('Error al actualizar el estado: ' + data.error);
-            cargarPedidos();
+            cargarPedidos(); // Recargar para restaurar el estado anterior
         }
     } catch (error) {
         console.error('Error al cambiar estado:', error);
@@ -232,6 +237,8 @@ async function cambiarEstado(idPedido, nuevoEstado) {
         cargarPedidos();
     }
 }
+
+// ============ NAVEGACIÓN ============
 
 function irAProductos() {
     window.location.href = '/index.html';
@@ -245,6 +252,8 @@ async function cerrarSesion() {
         console.error('Error al cerrar sesión:', error);
     }
 }
+
+// ============ UTILIDADES ============
 
 function mostrarNotificacion(mensaje) {
     const notif = document.createElement('div');
@@ -269,6 +278,7 @@ function mostrarNotificacion(mensaje) {
     }, 2000);
 }
 
+// Agregar animaciones CSS
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideIn {
@@ -294,6 +304,7 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+// ============ INICIALIZAR ============
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Página de pedidos cargada');
@@ -303,12 +314,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     await cargarPedidos();
     
+    // Cerrar modal al hacer clic fuera
     document.getElementById('modal-detalle').addEventListener('click', (e) => {
         if (e.target.id === 'modal-detalle') {
             cerrarModal();
         }
     });
     
-    // recarga los pedidos cada 30 segundos
+    // Recargar pedidos cada 30 segundos
     setInterval(cargarPedidos, 30000);
 });

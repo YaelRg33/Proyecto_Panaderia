@@ -1,20 +1,20 @@
-const express = require("express")
-const mysql = require("mysql2")
-const path = require('path') 
-const bodyParser = require('body-parser')
-const multer = require('multer')
-const session = require('express-session')
+require('dotenv').config(); 
+const express = require("express");
+const mysql = require("mysql2");
+const path = require('path');
+const bodyParser = require('body-parser');
+const multer = require('multer');
+const session = require('express-session');
 
-const app = express()
+const app = express();
 
-// --- CONEXIÓN A LA BD ---
+// --- 2. CONEXIÓN A LA BD (MODIFICADA) ---
 const con = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: 'n0m3l0',
-    database: 'proyectoPanaderia'
-}).promise(); // Usamos .promise() para async/await
-
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME
+}).promise(); 
 // ============ DEFINIR FUNCIONES ANTES DE USARLAS ============
 
 // Crear tablas de pedidos (CORREGIDO)
@@ -37,15 +37,6 @@ async function crearTablasPedidos() {
     subtotal DECIMAL(10,2) NOT NULL,
     FOREIGN KEY (id_pedido) REFERENCES pedidos(id_pedido)
 )`;
-
-    try {
-        await con.query(tablaPedidos);
-        console.log('✓ Tabla pedidos verificada');
-        await con.query(tablaDetalle);
-        console.log('✓ Tabla detalle_pedidos verificada');
-    } catch (err) {
-        console.log('Error creando tablas:', err);
-    }
 }
 
 // Insertar categorías iniciales
@@ -144,7 +135,6 @@ app.post('/login', async (req, res) => {
         if (resultado.length === 0) {
             return res.status(401).json({error: 'Credenciales incorrectas'});
         }
-        
         let usuario = resultado[0];
         req.session.usuario = {
             id: usuario.id_usuario,
@@ -483,14 +473,11 @@ app.put('/cambiarEstadoPedido/:id', verificarAdmin, async (req, res) => {
     }
 });
 
-// ============ RUTA RAÍZ ============
 
 app.get('/', (req, res) => {
     res.redirect('/login.html');
 });
 
-// ============ INICIAR SERVIDOR ============
-
 app.listen(3000, () => {
-    console.log('✓ Servidor corriendo en puerto 3000');
+    console.log('Servidor corriendo en puerto 3000');
 });

@@ -8,7 +8,7 @@ const session = require('express-session');
 
 const app = express();
 
-const con = mysql.createConnection({
+const con = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,

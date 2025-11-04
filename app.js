@@ -51,18 +51,6 @@ async function insertarCategoriasIniciales() {
     }
 }
 
-//Conexion a la db
-(async () => {
-    try {
-        await con.connect();
-        console.log('✓ Conectado a la BD');
-        await insertarCategoriasIniciales();
-        await crearTablasPedidos();
-    } catch (err) {
-        console.log('❌ Error conectando:', err);
-    }
-})();
-
 
 // Multer
 const storage = multer.diskStorage({

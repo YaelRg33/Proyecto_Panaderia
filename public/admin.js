@@ -1,4 +1,4 @@
-// ============ AUTENTICACIÓN ============
+//autentificacion
 
 async function verificarAutenticacion() {
     try {
@@ -26,7 +26,7 @@ async function verificarAutenticacion() {
 function irAPedidos() {
     window.location.href = '/pedidos.html';
 }
-// ============ CATEGORÍAS ============
+// categorias
 
 function cargarCategorias() {
     console.log('Intentando cargar categorías...');
@@ -57,7 +57,7 @@ function cargarCategorias() {
         });
 }
 
-// ============ PRODUCTOS ============
+// productos
 
 function agregarFilaTabla(producto) {
     let cuerpoTabla = document.getElementById('cuerpo-tabla');
@@ -241,12 +241,10 @@ function mostrarPreviewImagen(input) {
     }
 }
 
-// ============ INICIALIZAR ============
-
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DOM cargado');
     
-    // Verificar autenticación primero
+    // Verificar autenticacion
     const autenticado = await verificarAutenticacion();
     if (!autenticado) return;
     

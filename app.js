@@ -8,16 +8,14 @@ const session = require('express-session');
 
 const app = express();
 
-// --- 2. CONEXIÓN A LA BD (MODIFICADA) ---
 const con = mysql.createConnection({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME
 }).promise(); 
-// ============ DEFINIR FUNCIONES ANTES DE USARLAS ============
 
-// Crear tablas de pedidos (CORREGIDO)
+// Crear tablas de pedidos 
 async function crearTablasPedidos() {
     const tablaPedidos = `CREATE TABLE IF NOT EXISTS pedidos (
     id_pedido INT PRIMARY KEY AUTO_INCREMENT,
@@ -53,7 +51,7 @@ async function insertarCategoriasIniciales() {
     }
 }
 
-// ============ CONEXIÓN A LA BD (Ahora con async/await) ============
+//Conexion a la db
 (async () => {
     try {
         await con.connect();
@@ -66,7 +64,7 @@ async function insertarCategoriasIniciales() {
 })();
 
 
-// ============ CONFIGURACIÓN DE MULTER ============
+// Multer
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, 'public/images/')
@@ -91,7 +89,7 @@ const upload = multer({
     }
 })
 
-// ============ MIDDLEWARES ============
+// Middlewares
 
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
@@ -123,7 +121,7 @@ function verificarUsuario(req, res, next) {
     }
 }
 
-// ============ RUTAS DE AUTENTICACIÓN ============
+// rutas de autentificacion
 app.post('/login', async (req, res) => {
     let {email, password} = req.body;
     try {
@@ -200,7 +198,7 @@ app.get('/verificarSesion', (req, res) => {
     }
 });
 
-// ============ RUTAS DE PRODUCTOS ============
+// rutas produictos
 app.get('/obtenerProductos', async (req, res) => {
     try {
         const [resultado] = await con.query('SELECT * FROM productos');
@@ -256,7 +254,7 @@ app.delete('/eliminarProducto/:id', verificarAdmin, async (req, res) => {
     }
 });
 
-// ============ RUTAS DE CATEGORÍAS ============
+// rutas categorias
 app.get('/obtenerCategorias', async (req, res) => {
     try {
         const [resultado] = await con.query('SELECT * FROM categorias');
@@ -267,7 +265,7 @@ app.get('/obtenerCategorias', async (req, res) => {
     }
 });
 
-// ============ RUTAS DE CARRITO (CORREGIDAS) ============
+// rutas carrito
 
 // Obtener el carrito del usuario al iniciar sesión
 app.get('/miCarrito', verificarUsuario, async (req, res) => {
@@ -330,7 +328,7 @@ app.delete('/vaciarMiCarrito', verificarUsuario, async (req, res) => {
     }
 });
 
-// ============ RUTAS DE PEDIDOS ============
+// rutas oedidos
 
 app.post('/crearPedido', verificarUsuario, async (req, res) => {
     const { carrito, total } = req.body;
@@ -406,7 +404,7 @@ app.post('/crearPedido', verificarUsuario, async (req, res) => {
     }
 });
 
-// Obtener todos los pedidos (solo admin)
+// Obtener todos los pedidos
 app.get('/obtenerPedidos', verificarAdmin, async (req, res) => {
     const query = `SELECT 
     p.id_pedido, p.fecha, p.total, p.estado,

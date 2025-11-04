@@ -23,7 +23,9 @@ async function verificarAutenticacion() {
         return false;
     }
 }
-
+function irAPedidos() {
+    window.location.href = '/pedidos.html';
+}
 // ============ CATEGORÍAS ============
 
 function cargarCategorias() {

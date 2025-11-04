@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="logincss.css">
+    <title>La DesEsperanza - Login</title>
+
+</head>
+<body>
+    <div class="container">
+        <div class="banner">
+            <h1>La DesEsperanza</h1>
+            <p>Una Panaderia Para El Proyecto</p>
+        </div>
+
+        <div class="form-container">
+            <h2>Iniciar Sesión</h2>
+            
+            <div id="error-mensaje" class="error"></div>
+
+            <form id="form-login">
+                <div class="form-group">
+                    <label for="email">Correo Electrónico</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Contraseña</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
+            </form>
+
+            <div class="divider">o</div>
+
+            <button onclick="irATienda()" class="btn btn-secondary">Continuar sin cuenta</button>
+
+            <button onclick="irARegistro()" class="btn btn-link">¿No tienes cuenta? Regístrate aquí</button>
+        </div>
+    </div>
+
+    <script>
+        // Verificar si ya hay sesión activa
+        fetch('/verificarSesion')
+            .then(res => res.json())
+            .then(data => {
+                if (data.autenticado) {
+                    redirigirSegunRol(data.usuario.rol);
+                }
+            });
+
+        // Manejar login
+        document.getElementById('form-login').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({email, password})
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    redirigirSegunRol(data.usuario.rol);
+                } else {
+                    mostrarError(data.error || 'Error al iniciar sesión');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarError('Error de conexión con el servidor');
+            }
+        });
+
+        function redirigirSegunRol(rol) {
+            if (rol === 'admin') {
+                window.location.href = '/index.html';
+            } else {
+                window.location.href = '/clientee/index.html';
+            }
+        }
+
+        function mostrarError(mensaje) {
+            const errorDiv = document.getElementById('error-mensaje');
+            errorDiv.textContent = mensaje;
+            errorDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function irATienda() {
+            window.location.href = '/clientee/index.html';
+        }
+
+        function irARegistro() {
+            window.location.href = '/register.html';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - La DesEsperanza</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="encabezado">
+        <div class="contenedor-encabezado">
+            <div class="nombre-panaderia">
+                La DesEsperanza
+                <span>Panel de Administración</span>
+            </div>
+            <nav class="navegacion-admin">
+                <button class="boton-nav" id="boton-algo">algo</button>
+                <button class="boton-nav" id="boton-pedidos" onclick="irAPedidos()">Ver Pedidos</button>
+                <button class="boton-nav" id="boton-sesion">Cerrar Sesión</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Contenedor Principal -->
+    <main class="contenedor-principal">
+        <div class="titulo-seccion">
+            <h1>Catalogo de Panes</h1>
+            <button class="boton-agregar" id="agregarProducto">Agregar Nuevo Pan</button>
+        </div>
+
+        <!-- Tabla de panes -->
+        <div class="tabla-panes">
+            <table class="tabla" id="tabla-catalogo">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Imagen</th>
+                        <th>Nombre</th>
+                        <th>Descripción</th>
+                        <th>Precio</th>
+                        <th>Stock</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpo-tabla">
+                    <!-- Las filas se cargan aquí dinámicamente -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Modal para Agregar/Editar -->
+    <div class="modal" id="modal-formulario">
+        <div class="contenido-modal">
+            <h2 class="titulo-modal" id="titulo-formulario">Agregar Nuevo Producto</h2>
+            <form class="formulario-pan" id="formulario-pan" enctype="multipart/form-data">
+                <div class="grupo-campo">
+                    <label class="etiqueta-campo" for="campo-nombre">Nombre del Producto</label>
+                    <input type="text" id="campo-nombre" class="campo-texto" placeholder="Ej: Concha" required>
+                </div>
+
+                <div class="grupo-campo">
+                    <label class="etiqueta-campo" for="campo-descripcion">Descripción</label>
+                    <textarea id="campo-descripcion" class="campo-textarea" placeholder="Descripción del producto" required></textarea>
+                </div>
+
+                <div class="grupo-campo">
+                    <label class="etiqueta-campo" for="campo-precio">Precio</label>
+                    <input type="number" id="campo-precio" class="campo-numero" placeholder="0.00" step="0.01" min="0" required>
+                </div>
+
+                <div class="grupo-campo">
+                    <label class="etiqueta-campo" for="campo-stock">Stock</label>
+                    <input type="number" id="campo-stock" class="campo-numero" placeholder="0" min="0" required>
+                </div>
+
+                <div class="grupo-campo">
+                    <label class="etiqueta-campo" for="campo-categoria">Categoría</label>
+                    <select id="campo-categoria" class="campo-texto" required>
+                        <option value="">Seleccionar categoría</option>
+                    </select>
+                </div>
+
+                <div class="grupo-campo">
+                    <label class="etiqueta-campo" for="campo-img">Imagen del Producto</label>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <input type="file" id="campo-img" class="campo-archivo" accept="image/*">
+                        <div id="preview-imagen" style="margin-top: 10px;">
+                            <!-- La vista previa aparecerá aquí -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="botones-modal">
+                    <button type="submit" class="boton-guardar" id="boton-guardar">Guardar</button>
+                    <button type="button" class="boton-cancelar" id="boton-cancelar">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Confirmar Eliminación -->
+    <div class="modal" id="modal-eliminar">
+        <div class="contenido-modal">
+            <h2 class="titulo-modal">¿Eliminar Producto?</h2>
+            <p style="margin: 20px 0; color: #666;">¿Estás seguro de que deseas eliminar este producto? Esta acción no se puede deshacer.</p>
+            <div class="botones-modal">
+                <button class="boton-eliminar" id="confirmar-eliminar" style="flex: 1;">Eliminar</button>
+                <button class="boton-cancelar" id="cancelar-eliminar" style="flex: 1;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    
+</body>
+<script src="admin.js"></script>
+</html>

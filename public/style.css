@@ -1,0 +1,350 @@
+ * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+
+        /* Header */
+        .encabezado {
+            background-color: #8B4513;
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .contenedor-encabezado {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nombre-panaderia {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .nombre-panaderia span {
+            font-size: 14px;
+            display: block;
+            margin-top: 5px;
+            opacity: 0.9;
+        }
+
+        .navegacion-admin {
+            display: flex;
+            gap: 20px;
+        }
+
+        .boton-nav {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 10px 20px;
+            border: 2px solid white;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 16px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .boton-nav:hover {
+            background-color: white;
+            color: #8B4513;
+        }
+
+        /* Contenedor principal */
+        .contenedor-principal {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .titulo-seccion {
+            font-size: 32px;
+            color: #8B4513;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .boton-agregar {
+            background-color: #228B22;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .boton-agregar:hover {
+            background-color: #1a6b1a;
+        }
+
+        /* Tabla de panes */
+        .tabla-panes {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .tabla {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .tabla thead {
+            background-color: #DEB887;
+        }
+
+        .tabla th {
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+            color: #8B4513;
+        }
+
+        .tabla td {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .tabla tbody tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        .tabla tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Columna de acciones */
+        .columna-acciones {
+            display: flex;
+            gap: 10px;
+        }
+
+        .editarProducto {
+            background-color: #4169E1;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .editarProductor:hover {
+            background-color: #315bb5;
+        }
+
+        .eliminarProducto {
+            background-color: #DC143C;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .eliminarProducto:hover {
+            background-color: #a51030;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.activo {
+            display: flex;
+        }
+
+        .contenido-modal {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        }
+
+        .titulo-modal {
+            font-size: 24px;
+            color: #8B4513;
+            margin-bottom: 20px;
+        }
+
+        .formulario-pan {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .grupo-campo {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .etiqueta-campo {
+            font-weight: bold;
+            color: #555;
+        }
+
+        .campo-texto,
+        .campo-numero,
+        .campo-textarea {
+            padding: 10px;
+            border: 2px solid #DEB887;
+            border-radius: 5px;
+            font-size: 14px;
+            font-family: Arial, sans-serif;
+        }
+
+        .campo-texto:focus,
+        .campo-numero:focus,
+        .campo-textarea:focus {
+            outline: none;
+            border-color: #8B4513;
+        }
+
+        .campo-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .botones-modal {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .boton-editar{
+            flex: 1;
+            background-color: #2a75b6;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        .boton-eliminar{
+                        flex: 1;
+            background-color: #8b2222;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        .boton-guardar {
+            flex: 1;
+            background-color: #228B22;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        .boton-guardar:hover {
+            background-color: #1a6b1a;
+        }
+
+        .boton-cancelar {
+            flex: 1;
+            background-color: #888;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        .boton-cancelar:hover {
+            background-color: #666;
+        }
+
+        /* Badge de precio */
+        .precio {
+            color: #228B22;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .contenedor-encabezado {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .navegacion-admin {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .boton-nav {
+                text-align: center;
+            }
+
+            .titulo-seccion {
+                flex-direction: column;
+                gap: 15px;
+                align-items: flex-start;
+            }
+
+            .tabla-panes {
+                overflow-x: auto;
+            }
+
+            .tabla {
+                min-width: 600px;
+            }
+
+            .columna-acciones {
+                flex-direction: column;
+            }
+        }
+        .campo-archivo {
+    padding: 10px;
+    border: 2px dashed #ddd;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: border-color 0.3s;
+}
+
+.campo-archivo:hover {
+    border-color: #8B4513;
+}

@@ -200,7 +200,7 @@ function abrirModalEditar(id) {
                     previewDiv.innerHTML = `
                         <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 5px;">
                             <span style="color: #666; font-size: 12px;">Imagen actual:</span>
-                            <img src="${producto.img}" alt="${producto.nombre}" style="max-width: 200px; max-height: 200px; border-radius: 5px; border: 1px solid #ddd;">
+                            <img src="${producto.img}" alt="${producto.nombre}" style="max-width: 60px; max-height: 60px; border-radius: 5px; border: 1px solid #ddd;">
                             <span style="color: #999; font-size: 11px;">Selecciona una nueva imagen para reemplazarla</span>
                         </div>
                     `;
@@ -232,7 +232,7 @@ function mostrarPreviewImagen(input) {
             previewDiv.innerHTML = `
                 <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 5px;">
                     <span style="color: #666; font-size: 12px;">Vista previa:</span>
-                    <img src="${e.target.result}" alt="Preview" style="max-width: 200px; max-height: 200px; border-radius: 5px; border: 1px solid #ddd;">
+                    <img src="${e.target.result}" alt="Preview" style="max-width: 60px; max-height: 60px; border-radius: 5px; border: 1px solid #ddd;">
                 </div>
             `;
         };
@@ -246,7 +246,6 @@ function mostrarPreviewImagen(input) {
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DOM cargado');
     
-    // Verificar autenticación primero
     const autenticado = await verificarAutenticacion();
     if (!autenticado) return;
     
@@ -274,7 +273,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
     
-    // Manejar formulario
     let formulario = document.getElementById('formulario-pan');
     if (formulario) {
         formulario.addEventListener('submit', (e) => {

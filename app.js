@@ -7,8 +7,6 @@ const multer = require('multer');
 const session = require('express-session');
 
 const app = express();
-
-// --- CONEXIÓN A LA BD CORREGIDA (SIN WARNINGS) ---
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -17,30 +15,13 @@ const pool = mysql.createPool({
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    // Configuraciones válidas para createPool:
     acquireTimeout: 60000,
     timeout: 60000,
-    reconnect: false // Esta opción no es válida para pools, se remueve
+    reconnect: false 
 });
 
 const con = pool.promise();
 
-// Manejo de errores del pool
-pool.on('error', (err) => {
-    console.error('Error del pool MySQL:', err);
-});
-
-pool.on('acquire', (connection) => {
-    console.log('Conexión adquirida del pool');
-});
-
-pool.on('release', (connection) => {
-    console.log('Conexión liberada al pool');
-});
-
-// ============ DEFINIR FUNCIONES ANTES DE USARLAS ============
-
-// Crear tablas de pedidos (CORREGIDO - ejecutar las queries)
 async function crearTablasPedidos() {
     try {
         const tablaPedidos = `CREATE TABLE IF NOT EXISTS pedidos (
@@ -64,38 +45,37 @@ async function crearTablasPedidos() {
 
         await con.query(tablaPedidos);
         await con.query(tablaDetalle);
-        console.log('✓ Tablas de pedidos verificadas/creadas');
     } catch (err) {
-        console.log('❌ Error creando tablas de pedidos:', err.message);
+        console.log(' Error creando tablas de pedidos:', err.message);
     }
 }
 
-// Insertar categorías iniciales
 async function insertarCategoriasIniciales() {
-    try {
+    
+        const [categoriaActuales] = await con.query('SELECT COUNT(*) as total FROM categorias');
+        
+        if (categoriaActuales[0].total > 0) {
+            return;
+        }
+        
         const categorias = ['Pan Blanco', 'Pan de Dulce', 'Repostería', 'Especiales'];
-        const query = 'INSERT IGNORE INTO categorias (nombre) VALUES (?)';
+        const query = 'INSERT INTO categorias (nombre) VALUES (?)';
         
         for (const nombre of categorias) {
             await con.query(query, [nombre]);
         }
-        console.log('✓ Categorías iniciales verificadas');
-    } catch (err) {
-        console.log('❌ Error insertando categorías:', err.message);
-    }
 }
 
-// ============ INICIALIZACIÓN ============
 async function inicializarApp() {
     try {
-        // Verificar conexión
+       
         const [rows] = await con.query('SELECT 1 as connected');
-        console.log('✓ Conectado a la BD');
+        console.log(' Conectado a la BD');
         
         await insertarCategoriasIniciales();
         await crearTablasPedidos();
     } catch (err) {
-        console.log('❌ Error en inicialización:', err.message);
+        console.log(' Error en inicialización:', err.message);
     }
 }
 

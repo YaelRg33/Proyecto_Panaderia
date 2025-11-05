@@ -244,11 +244,10 @@ async function finalizarCompra() {
         if (response.ok) {
             const mensaje = `¡Compra finalizada exitosamente!\n\nTotal: $${total.toFixed(2)}\nNúmero de pedido: ${data.id_pedido}\n\n¡Gracias por tu compra, ${usuarioActual.nombre}!`;
             alert(mensaje);
-            
-            // Limpiar carrito y recargar productos
+        
             carrito = [];
             actualizarCarrito();
-            await cargarProductos(); // Recargar para ver stock actualizado
+            await cargarProductos(); 
             document.getElementById('modal-carrito').classList.remove('active');
         } else {
             alert('Error al procesar la compra: ' + data.error);
@@ -338,7 +337,6 @@ async function cerrarSesion() {
 
 // ============ UTILIDADES ============
 function mostrarNotificacion(mensaje) {
-    // Crear notificación temporal
     const notif = document.createElement('div');
     notif.style.cssText = `
         position: fixed;
@@ -360,7 +358,6 @@ function mostrarNotificacion(mensaje) {
     }, 2000);
 }
 
-// Agregar animaciones CSS
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideIn {

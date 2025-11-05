@@ -314,7 +314,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     await cargarPedidos();
     
-    // Cerrar modal al hacer clic fuera
     document.getElementById('modal-detalle').addEventListener('click', (e) => {
         if (e.target.id === 'modal-detalle') {
             cerrarModal();

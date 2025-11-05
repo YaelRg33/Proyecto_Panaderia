@@ -425,7 +425,7 @@ app.post('/crearPedido', verificarUsuario, async (req, res) => {
     }
 });
 
-// Resto de las rutas de pedidos (sin cambios en la lógica)
+// Resto de las rutas de pedidos
 app.get('/obtenerPedidos', verificarAdmin, async (req, res) => {
     const query = `SELECT 
     p.id_pedido, p.fecha, p.total, p.estado,

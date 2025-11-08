@@ -5,8 +5,12 @@ const path = require('path');
 const bodyParser = require('body-parser');
 const multer = require('multer');
 const session = require('express-session');
+// CAMBIO 1: Importar el store para sesiones MySQL
+const MySQLStore = require('express-mysql-session')(session);
 
 const app = express();
+
+// CAMBIO 2: Limpiar opciones inválidas del pool
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -15,9 +19,8 @@ const pool = mysql.createPool({
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    acquireTimeout: 60000,
-    timeout: 60000,
-    reconnect: false 
+    acquireTimeout: 60000
+    // Se eliminaron 'timeout' y 'reconnect' que causaban warnings
 });
 
 const con = pool.promise();
@@ -112,9 +115,13 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
-// Configurar sesiones
+// CAMBIO 3: Configurar el store de sesiones usando el pool existente
+const sessionStore = new MySQLStore({}, pool);
+
 app.use(session({
+    key: 'session_bakery_app', // Nombre opcional para la cookie
     secret: process.env.SESSION_SECRET || '0Oyb0pxvbir0o9y1EbBs3QqQd0n0HtwW',
+    store: sessionStore, // Usar MySQL para guardar sesiones
     resave: false,
     saveUninitialized: false,
     cookie: { 

@@ -5,12 +5,10 @@ const path = require('path');
 const bodyParser = require('body-parser');
 const multer = require('multer');
 const session = require('express-session');
-// CAMBIO 1: Importar el store para sesiones MySQL
 const MySQLStore = require('express-mysql-session')(session);
 
 const app = express();
-
-// CAMBIO 2: Limpiar opciones inválidas del pool
+app.set('trust proxy', 1);
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -20,7 +18,6 @@ const pool = mysql.createPool({
     connectionLimit: 10,
     queueLimit: 0,
     acquireTimeout: 60000
-    // Se eliminaron 'timeout' y 'reconnect' que causaban warnings
 });
 
 const con = pool.promise();

@@ -114,7 +114,7 @@ app.use(express.static('public'));
 
 // Configurar sesiones
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'panaderia-secreta-2025',
+    secret: process.env.SESSION_SECRET || '0Oyb0pxvbir0o9y1EbBs3QqQd0n0HtwW',
     resave: false,
     saveUninitialized: false,
     cookie: { 

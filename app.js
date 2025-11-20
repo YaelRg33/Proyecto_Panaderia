@@ -7,8 +7,29 @@ const multer = require('multer');
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
 
+// --- NUEVOS IMPORTS PARA SOCKET.IO Y LEAFLET ---
+const http = require('http'); 
+const socketIO = require('socket.io');
+const engine = require('ejs-mate'); 
+// -----------------------------------------------
+
 const app = express();
+
+// --- CONFIGURACIÓN DEL SERVIDOR HTTP Y SOCKET.IO ---
+// Creamos el servidor HTTP a partir de Express para poder unirlo con Socket.io
+const server = http.createServer(app);
+const io = socketIO(server);
+// ---------------------------------------------------
+
 app.set('trust proxy', 1);
+
+// --- CONFIGURACIÓN DE MOTOR DE VISTAS (EJS) ---
+// Agregado del código de Leaflet
+app.engine('ejs', engine);
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+// ----------------------------------------------
+
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -51,16 +72,12 @@ async function crearTablasPedidos() {
 }
 
 async function insertarCategoriasIniciales() {
-    
         const [categoriaActuales] = await con.query('SELECT COUNT(*) as total FROM categorias');
-        
         if (categoriaActuales[0].total > 0) {
             return;
         }
-        
         const categorias = ['Pan Blanco', 'Pan de Dulce', 'Repostería', 'Especiales'];
         const query = 'INSERT INTO categorias (nombre) VALUES (?)';
-        
         for (const nombre of categorias) {
             await con.query(query, [nombre]);
         }
@@ -68,10 +85,8 @@ async function insertarCategoriasIniciales() {
 
 async function inicializarApp() {
     try {
-       
         const [rows] = await con.query('SELECT 1 as connected');
         console.log(' Conectado a la BD');
-        
         await insertarCategoriasIniciales();
         await crearTablasPedidos();
     } catch (err) {
@@ -99,7 +114,6 @@ const upload = multer({
         const filetypes = /jpeg|jpg|png|gif|webp/;
         const mimetype = filetypes.test(file.mimetype);
         const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-        
         if (mimetype && extname) {
             return cb(null, true);
         }
@@ -110,15 +124,15 @@ const upload = multer({
 // ============ MIDDLEWARES ============
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public'))); // Ajustado para usar path.join
 
-// CAMBIO 3: Configurar el store de sesiones usando el pool existente
+// Configurar el store de sesiones usando el pool existente
 const sessionStore = new MySQLStore({}, pool);
 
 app.use(session({
-    key: 'session_bakery_app', // Nombre opcional para la cookie
+    key: 'session_bakery_app', 
     secret: process.env.SESSION_SECRET || '0Oyb0pxvbir0o9y1EbBs3QqQd0n0HtwW',
-    store: sessionStore, // Usar MySQL para guardar sesiones
+    store: sessionStore, 
     resave: false,
     saveUninitialized: false,
     cookie: { 
@@ -146,6 +160,15 @@ function verificarUsuario(req, res, next) {
     }
 }
 
+// --- RUTAS ADICIONALES DEL LEAFLET ---
+// Nota: Asegúrate de que exista el archivo ./routes/index.js o comenta esta línea si no lo tienes aún
+try {
+    app.use(require('./routes/index'));
+} catch (e) {
+    console.log("Advertencia: No se encontró ./routes/index para Leaflet, continuando sin él.");
+}
+// -------------------------------------
+
 // ============ RUTAS DE AUTENTICACIÓN ============
 app.post('/login', async (req, res) => {
     let {email, password} = req.body;
@@ -154,11 +177,9 @@ app.post('/login', async (req, res) => {
             'SELECT * FROM usuarios WHERE email = ? AND password = ?',
             [email, password]
         );
-        
         if (resultado.length === 0) {
             return res.status(401).json({error: 'Credenciales incorrectas'});
         }
-        
         let usuario = resultado[0];
         req.session.usuario = {
             id: usuario.id_usuario,
@@ -166,7 +187,6 @@ app.post('/login', async (req, res) => {
             email: usuario.email,
             rol: usuario.rol
         };
-        
         res.json({
             mensaje: 'Login exitoso',
             usuario: req.session.usuario
@@ -184,16 +204,13 @@ app.post('/register', async (req, res) => {
             'SELECT * FROM usuarios WHERE email = ?',
             [email]
         );
-        
         if (resultado.length > 0) {
             return res.status(400).json({error: 'El email ya está registrado'});
         }
-        
         const [resultadoInsert] = await con.query(
             'INSERT INTO usuarios (nombre, email, password, rol) VALUES (?, ?, ?, ?)',
             [nombre, email, password, 'cliente']
         );
-        
         res.json({
             mensaje: 'Usuario registrado exitosamente',
             id_usuario: resultadoInsert.insertId
@@ -244,7 +261,6 @@ app.post('/agregarProducto', verificarAdmin, upload.single('imagen'), async (req
             'INSERT INTO productos (nombre, descripcion, precio, stock, img, id_categoria) VALUES (?, ?, ?, ?, ?, ?)',
             [nombre, descripcion, precio, stock, img, id_categoria]
         );
-        
         res.json({
             id_producto: resultado.insertId,
             nombre, descripcion, precio, stock, img, id_categoria
@@ -265,7 +281,6 @@ app.put('/editarProducto/:id', verificarAdmin, upload.single('imagen'), async (r
             'UPDATE productos SET nombre = ?, descripcion = ?, precio = ?, stock = ?, img = ?, id_categoria = ? WHERE id_producto = ?',
             [nombre, descripcion, precio, stock, img, id_categoria, id]
         );
-        
         res.json({id_producto: id, nombre, descripcion, precio, stock, img, id_categoria});
     } catch (err) {
         console.log('Error editando producto:', err.message);
@@ -519,8 +534,15 @@ app.get('/', (req, res) => {
     res.redirect('/login.html');
 });
 
+try {
+    require('./sockets')(io);
+} catch (e) {
+    console.log("Advertencia: No se encontró el archivo ./sockets.js, los sockets no responderán.");
+}
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+
+server.listen(PORT, () => {
     console.log(`Servidor corriendo en puerto ${PORT}`);
     console.log(`Entorno: ${process.env.NODE_ENV || 'development'}`);
 });

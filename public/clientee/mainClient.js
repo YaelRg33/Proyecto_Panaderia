@@ -5,6 +5,12 @@ let carrito = [];
 let usuarioActual = null;
 let categoriaActual = 'todas';
 
+// --- NUEVO: VARIABLES DEL MAPA ---
+let map = null;
+let marker = null;
+let ubicacionSeleccionada = null;
+// ---------------------------------
+
 // ============ CARGAR DATOS INICIALES ============
 async function verificarSesion() {
     try {
@@ -14,7 +20,7 @@ async function verificarSesion() {
             usuarioActual = data.usuario;
             mostrarInfoUsuario();
         } else {
-          mostrarOpcionLogin();
+            mostrarOpcionLogin();
         }
     } catch (error) {
         console.error('Error al verificar sesión:', error);
@@ -68,7 +74,7 @@ function mostrarProductos() {
         grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 40px; color: #999;">No hay productos en esta categoría</p>';
         return;
     }
-   
+    
     productosFiltrados.forEach(producto => {
         const card = crearCardProducto(producto);
         grid.appendChild(card);
@@ -172,6 +178,10 @@ function actualizarCarrito() {
 function mostrarItemsCarrito() {
     const contenedor = document.getElementById('items-carrito');
     const totalSpan = document.getElementById('total-carrito');
+    
+    // Si no existen los elementos (por si acaso el DOM no cargó), salir
+    if (!contenedor || !totalSpan) return;
+
     if (carrito.length === 0) {
         contenedor.innerHTML = '<p class="carrito-vacio">Tu carrito está vacío</p>';
         totalSpan.textContent = '0.00';
@@ -208,7 +218,10 @@ function mostrarItemsCarrito() {
     totalSpan.textContent = total.toFixed(2);
 }
 
-async function finalizarCompra() {
+// ============ NUEVA LÓGICA DE MAPA Y COMPRA ============
+
+// Paso 1: Ir al mapa (antes era finalizarCompra)
+function irAlMapa() {
     if (carrito.length === 0) {
         alert('El carrito está vacío');
         return;
@@ -219,52 +232,139 @@ async function finalizarCompra() {
         }
         return;
     }
+
+    // Cambiar visibilidad de elementos en el modal
+    document.getElementById('vista-lista-productos').style.display = 'none';
+    document.getElementById('vista-mapa-ubicacion').style.display = 'block';
     
+    document.getElementById('botones-carrito').style.display = 'none';
+    document.getElementById('botones-mapa').style.display = 'flex';
+
+    document.getElementById('titulo-modal-carrito').innerText = "Confirmar Ubicación";
+
+    // Iniciar Mapa
+    initMap();
+}
+
+// Paso 2: Volver a la lista
+function volverALista() {
+    document.getElementById('vista-mapa-ubicacion').style.display = 'none';
+    document.getElementById('vista-lista-productos').style.display = 'block';
+    
+    document.getElementById('botones-mapa').style.display = 'none';
+    document.getElementById('botones-carrito').style.display = 'flex'; // Ajusta si usabas 'block'
+
+    document.getElementById('titulo-modal-carrito').innerText = "Mi Carrito";
+}
+
+// Función de inicialización de Leaflet
+function initMap() {
+    // Si ya existe el mapa, solo ajustamos tamaño (fix para modales)
+    if (map) {
+        setTimeout(() => { map.invalidateSize(); }, 100);
+        return;
+    }
+
+    // Coordenadas iniciales (CDMX por defecto)
+    const lat = 19.4326; 
+    const lng = -99.1332;
+
+    // Crear mapa
+    map = L.map('mapa-seleccion').setView([lat, lng], 15);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    // Intentar obtener ubicación real
+    map.locate({enableHighAccuracy: true});
+
+    map.on('locationfound', (e) => {
+        actualizarMarcador(e.latlng);
+        map.flyTo(e.latlng, 16);
+    });
+
+    map.on('click', (e) => {
+        actualizarMarcador(e.latlng);
+    });
+    
+    // Fix para que renderice bien dentro del modal oculto
+    setTimeout(() => { map.invalidateSize(); }, 200);
+}
+
+function actualizarMarcador(latlng) {
+    if (marker) {
+        marker.setLatLng(latlng);
+    } else {
+        marker = L.marker(latlng, {draggable: true}).addTo(map);
+        
+        marker.on('dragend', function(e) {
+            ubicacionSeleccionada = e.target.getLatLng();
+            document.getElementById('coords-info').innerText = `Ubicación: ${ubicacionSeleccionada.lat.toFixed(5)}, ${ubicacionSeleccionada.lng.toFixed(5)}`;
+        });
+    }
+    ubicacionSeleccionada = latlng;
+    document.getElementById('coords-info').innerText = `Ubicación: ${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`;
+}
+
+// Paso 3: Confirmar y Enviar Pedido (Fetch Final)
+async function confirmarPedidoFinal() {
+    if (!ubicacionSeleccionada) {
+        alert("Por favor selecciona tu ubicación en el mapa.");
+        return;
+    }
+
     const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
     
-    // Deshabilitar botón para evitar doble click
-    const btnFinalizar = document.getElementById('btn-finalizar');
-    btnFinalizar.disabled = true;
-    btnFinalizar.textContent = 'Procesando...';
+    // Deshabilitar botón
+    const btnConfirmar = document.getElementById('btn-confirmar-pedido');
+    btnConfirmar.disabled = true;
+    btnConfirmar.textContent = 'Enviando...';
     
     try {
         const response = await fetch('/crearPedido', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 carrito: carrito,
-                total: total
+                total: total,
+                latitud: ubicacionSeleccionada.lat,
+                longitud: ubicacionSeleccionada.lng
             })
         });
         
         const data = await response.json();
         
         if (response.ok) {
-            const mensaje = `¡Compra finalizada exitosamente!\n\nTotal: $${total.toFixed(2)}\nNúmero de pedido: ${data.id_pedido}\n\n¡Gracias por tu compra, ${usuarioActual.nombre}!`;
+            const mensaje = `¡Pedido realizado!\nID: ${data.id_pedido}\nTotal: $${total.toFixed(2)}\n\nLlegará a la ubicación seleccionada.`;
             alert(mensaje);
         
             carrito = [];
             actualizarCarrito();
-            await cargarProductos(); 
-            document.getElementById('modal-carrito').classList.remove('active');
+            await cargarProductos();
+            
+            // Cerrar modal y resetear vista
+            cerrarModalCarrito();
+            // Resetear variables de mapa
+            ubicacionSeleccionada = null;
+            if(marker) { map.removeLayer(marker); marker = null; }
+            volverALista(); // Para que la próxima vez abra en lista
+            
         } else {
-            alert('Error al procesar la compra: ' + data.error);
+            alert('Error: ' + data.error);
         }
     } catch (error) {
         console.error('Error al finalizar compra:', error);
-        alert('Error al procesar la compra. Por favor intenta nuevamente.');
+        alert('Error de conexión.');
     } finally {
-        btnFinalizar.disabled = false;
-        btnFinalizar.textContent = 'Finalizar Compra';
+        btnConfirmar.disabled = false;
+        btnConfirmar.textContent = 'Confirmar Pedido';
     }
 }
 
 // ============ FILTROS ============
 function aplicarFiltro(categoria) {
     categoriaActual = categoria;
-    // Actualizar botones activos
     document.querySelectorAll('.btn-filtro').forEach(btn => {
         btn.classList.remove('active');
     });
@@ -275,6 +375,8 @@ function aplicarFiltro(categoria) {
 // ============ MODALES ============
 function abrirModalCarrito() {
     mostrarItemsCarrito();
+    // Asegurarnos de que siempre se abra en la vista de lista primero
+    volverALista();
     document.getElementById('modal-carrito').classList.add('active');
 }
 
@@ -291,6 +393,7 @@ function abrirModalCuenta() {
                 <p><strong>Email:</strong> ${usuarioActual.email}</p>
                 <p><strong>Rol:</strong> ${usuarioActual.rol === 'admin' ? 'Administrador' : 'Cliente'}</p>
                 ${usuarioActual.rol === 'admin' ? '<button class="btn-login" onclick="irAPanelAdmin()">Ir al Panel de Admin</button>' : ''}
+                <button class="btn-login" onclick="window.location.href='/misPedidos.html'">Mis Pedidos</button>
                 <button class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</button>
             </div>
         `;
@@ -361,27 +464,14 @@ function mostrarNotificacion(mensaje) {
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideIn {
-        from {
-            transform: translateX(400px);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
+        from { transform: translateX(400px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
     }
     @keyframes slideOut {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(400px);
-            opacity: 0;
-        }
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(400px); opacity: 0; }
     }
 `;
-
 document.head.appendChild(style);
 
 // ============ INICIALIZAR ============
@@ -392,11 +482,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     await cargarCategorias();
     await cargarProductos();
 
-    // Eventos de carrito
+    // Eventos generales
     document.getElementById('btn-carrito').addEventListener('click', abrirModalCarrito);
     document.getElementById('cerrar-carrito').addEventListener('click', cerrarModalCarrito);
-    document.getElementById('btn-finalizar').addEventListener('click', finalizarCompra);
     document.getElementById('btn-vaciar').addEventListener('click', vaciarCarrito);
+    
+    // --- NUEVOS EVENTOS PARA EL FLUJO DE MAPA ---
+    // 1. Botón "Continuar Compra" (en la lista) -> Lleva al mapa
+    const btnIrPagar = document.getElementById('btn-ir-pagar');
+    if(btnIrPagar) btnIrPagar.addEventListener('click', irAlMapa);
+
+    // 2. Botón "Volver" (en el mapa) -> Vuelve a la lista
+    const btnVolver = document.getElementById('btn-volver-lista');
+    if(btnVolver) btnVolver.addEventListener('click', volverALista);
+
+    // 3. Botón "Confirmar Pedido" (en el mapa) -> Hace el fetch
+    const btnConfirmar = document.getElementById('btn-confirmar-pedido');
+    if(btnConfirmar) btnConfirmar.addEventListener('click', confirmarPedidoFinal);
+    // ---------------------------------------------
     
     // Eventos de cuenta
     document.getElementById('btn-cuenta').addEventListener('click', abrirModalCuenta);
@@ -404,14 +507,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Cerrar modales al hacer click fuera
     document.getElementById('modal-carrito').addEventListener('click', (e) => {
-        if (e.target.id === 'modal-carrito') {
-            cerrarModalCarrito();
-        }
+        if (e.target.id === 'modal-carrito') cerrarModalCarrito();
     });
     document.getElementById('modal-cuenta').addEventListener('click', (e) => {
-        if (e.target.id === 'modal-cuenta') {
-            cerrarModalCuenta();
-        }
+        if (e.target.id === 'modal-cuenta') cerrarModalCuenta();
     });
     
     // Eventos de filtros
@@ -419,7 +518,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         btn.addEventListener('click', (e) => {
             const categoria = btn.dataset.categoria;
             categoriaActual = categoria;
-
             document.querySelectorAll('.btn-filtro').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             mostrarProductos();

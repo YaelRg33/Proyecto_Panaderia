@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>La DesEsperanza - Tienda</title>
     <link rel="stylesheet" href="estilo.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+    #mapa-seleccion { height: 300px; width: 100%; margin-bottom: 15px; }
+</style>
 </head>
 <body>
     <!-- Header -->
@@ -48,23 +53,42 @@
     </section>
 
     <!-- Modal del Carrito -->
-    <div id="modal-carrito" class="modal">
+<div id="modal-carrito" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Mi Carrito</h2>
+                <h2 id="titulo-modal-carrito">Mi Carrito</h2>
                 <button class="btn-cerrar" id="cerrar-carrito">&times;</button>
             </div>
+            
             <div class="modal-body">
-                <div id="items-carrito">
-                    <p class="carrito-vacio">Tu carrito está vacío</p>
+                <div id="vista-lista-productos">
+                    <div id="items-carrito">
+                        <p class="carrito-vacio">Tu carrito está vacío</p>
+                    </div>
+                </div>
+
+                <div id="vista-mapa-ubicacion" style="display: none;">
+                    <h3 style="margin-bottom:10px; color: #333;">📍 Selecciona tu ubicación de entrega</h3>
+                    <div id="mapa-seleccion"></div> <p id="coords-info" style="font-size: 0.9em; color: #666; text-align: center; margin-top: 5px;">
+                        Arrastra el marcador rojo a tu puerta.
+                    </p>
                 </div>
             </div>
+
             <div class="modal-footer">
                 <div class="total-carrito">
                     <h3>Total: $<span id="total-carrito">0.00</span></h3>
                 </div>
-                <button id="btn-finalizar" class="btn-finalizar">Finalizar Compra</button>
-                <button id="btn-vaciar" class="btn-vaciar">Vaciar Carrito</button>
+                
+                <div id="botones-carrito">
+                    <button id="btn-vaciar" class="btn-vaciar">Vaciar</button>
+                    <button id="btn-ir-pagar" class="btn-finalizar">Continuar Compra</button>
+                </div>
+
+                <div id="botones-mapa" style="display: none;">
+                    <button id="btn-volver-lista" class="btn-vaciar">Volver</button>
+                    <button id="btn-confirmar-pedido" class="btn-finalizar">Confirmar Pedido</button>
+                </div>
             </div>
         </div>
     </div>

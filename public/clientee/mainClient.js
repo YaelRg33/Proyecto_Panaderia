@@ -1,17 +1,12 @@
-// ============ ESTADO GLOBAL ============
 let productos = [];
 let categorias = [];
 let carrito = [];
 let usuarioActual = null;
 let categoriaActual = 'todas';
-
-// --- NUEVO: VARIABLES DEL MAPA ---
 let map = null;
 let marker = null;
 let ubicacionSeleccionada = null;
-// ---------------------------------
 
-// ============ CARGAR DATOS INICIALES ============
 async function verificarSesion() {
     try {
         const response = await fetch('/verificarSesion');
@@ -61,7 +56,6 @@ async function cargarCategorias() {
     }
 }
 
-// ============ MOSTRAR PRODUCTOS ============
 
 function mostrarProductos() {
     const grid = document.getElementById('grid-productos');
@@ -117,7 +111,6 @@ function crearCardProducto(producto) {
     return card;
 }
 
-// ============ CARRITO ============
 function agregarAlCarrito(idProducto) {
     const producto = productos.find(p => p.id_producto === idProducto);
     if (!producto) return;
@@ -179,7 +172,6 @@ function mostrarItemsCarrito() {
     const contenedor = document.getElementById('items-carrito');
     const totalSpan = document.getElementById('total-carrito');
     
-    // Si no existen los elementos (por si acaso el DOM no cargó), salir
     if (!contenedor || !totalSpan) return;
 
     if (carrito.length === 0) {
@@ -218,9 +210,6 @@ function mostrarItemsCarrito() {
     totalSpan.textContent = total.toFixed(2);
 }
 
-// ============ NUEVA LÓGICA DE MAPA Y COMPRA ============
-
-// Paso 1: Ir al mapa (antes era finalizarCompra)
 function irAlMapa() {
     if (carrito.length === 0) {
         alert('El carrito está vacío');
@@ -233,7 +222,6 @@ function irAlMapa() {
         return;
     }
 
-    // Cambiar visibilidad de elementos en el modal
     document.getElementById('vista-lista-productos').style.display = 'none';
     document.getElementById('vista-mapa-ubicacion').style.display = 'block';
     
@@ -242,41 +230,34 @@ function irAlMapa() {
 
     document.getElementById('titulo-modal-carrito').innerText = "Confirmar Ubicación";
 
-    // Iniciar Mapa
     initMap();
 }
 
-// Paso 2: Volver a la lista
 function volverALista() {
     document.getElementById('vista-mapa-ubicacion').style.display = 'none';
     document.getElementById('vista-lista-productos').style.display = 'block';
     
     document.getElementById('botones-mapa').style.display = 'none';
-    document.getElementById('botones-carrito').style.display = 'flex'; // Ajusta si usabas 'block'
+    document.getElementById('botones-carrito').style.display = 'flex'; 
 
     document.getElementById('titulo-modal-carrito').innerText = "Mi Carrito";
 }
 
-// Función de inicialización de Leaflet
 function initMap() {
-    // Si ya existe el mapa, solo ajustamos tamaño (fix para modales)
     if (map) {
         setTimeout(() => { map.invalidateSize(); }, 100);
         return;
     }
 
-    // Coordenadas iniciales (CDMX por defecto)
     const lat = 19.4326; 
     const lng = -99.1332;
 
-    // Crear mapa
     map = L.map('mapa-seleccion').setView([lat, lng], 15);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    // Intentar obtener ubicación real
     map.locate({enableHighAccuracy: true});
 
     map.on('locationfound', (e) => {
@@ -288,7 +269,6 @@ function initMap() {
         actualizarMarcador(e.latlng);
     });
     
-    // Fix para que renderice bien dentro del modal oculto
     setTimeout(() => { map.invalidateSize(); }, 200);
 }
 
@@ -307,7 +287,6 @@ function actualizarMarcador(latlng) {
     document.getElementById('coords-info').innerText = `Ubicación: ${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`;
 }
 
-// Paso 3: Confirmar y Enviar Pedido (Fetch Final)
 async function confirmarPedidoFinal() {
     if (!ubicacionSeleccionada) {
         alert("Por favor selecciona tu ubicación en el mapa.");
@@ -316,7 +295,6 @@ async function confirmarPedidoFinal() {
 
     const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
     
-    // Deshabilitar botón
     const btnConfirmar = document.getElementById('btn-confirmar-pedido');
     btnConfirmar.disabled = true;
     btnConfirmar.textContent = 'Enviando...';
@@ -343,12 +321,10 @@ async function confirmarPedidoFinal() {
             actualizarCarrito();
             await cargarProductos();
             
-            // Cerrar modal y resetear vista
             cerrarModalCarrito();
-            // Resetear variables de mapa
             ubicacionSeleccionada = null;
             if(marker) { map.removeLayer(marker); marker = null; }
-            volverALista(); // Para que la próxima vez abra en lista
+            volverALista();
             
         } else {
             alert('Error: ' + data.error);
@@ -362,7 +338,6 @@ async function confirmarPedidoFinal() {
     }
 }
 
-// ============ FILTROS ============
 function aplicarFiltro(categoria) {
     categoriaActual = categoria;
     document.querySelectorAll('.btn-filtro').forEach(btn => {
@@ -372,10 +347,8 @@ function aplicarFiltro(categoria) {
     mostrarProductos();
 }
 
-// ============ MODALES ============
 function abrirModalCarrito() {
     mostrarItemsCarrito();
-    // Asegurarnos de que siempre se abra en la vista de lista primero
     volverALista();
     document.getElementById('modal-carrito').classList.add('active');
 }
@@ -414,7 +387,6 @@ function cerrarModalCuenta() {
     document.getElementById('modal-cuenta').classList.remove('active');
 }
 
-// ============ NAVEGACIÓN ============
 
 function irALogin() {
     window.location.href = '/login.html';
@@ -437,7 +409,6 @@ async function cerrarSesion() {
     }
 }
 
-// ============ UTILIDADES ============
 function mostrarNotificacion(mensaje) {
     const notif = document.createElement('div');
     notif.style.cssText = `
@@ -473,7 +444,6 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// ============ INICIALIZAR ============
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Tienda cargada');
 
@@ -481,30 +451,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     await cargarCategorias();
     await cargarProductos();
 
-    // Eventos generales
     document.getElementById('btn-carrito').addEventListener('click', abrirModalCarrito);
     document.getElementById('cerrar-carrito').addEventListener('click', cerrarModalCarrito);
     document.getElementById('btn-vaciar').addEventListener('click', vaciarCarrito);
     
-    // --- NUEVOS EVENTOS PARA EL FLUJO DE MAPA ---
-    // 1. Botón "Continuar Compra" (en la lista) -> Lleva al mapa
     const btnIrPagar = document.getElementById('btn-ir-pagar');
     if(btnIrPagar) btnIrPagar.addEventListener('click', irAlMapa);
 
-    // 2. Botón "Volver" (en el mapa) -> Vuelve a la lista
     const btnVolver = document.getElementById('btn-volver-lista');
     if(btnVolver) btnVolver.addEventListener('click', volverALista);
 
-    // 3. Botón "Confirmar Pedido" (en el mapa) -> Hace el fetch
     const btnConfirmar = document.getElementById('btn-confirmar-pedido');
     if(btnConfirmar) btnConfirmar.addEventListener('click', confirmarPedidoFinal);
-    // ---------------------------------------------
     
-    // Eventos de cuenta
     document.getElementById('btn-cuenta').addEventListener('click', abrirModalCuenta);
     document.getElementById('cerrar-cuenta').addEventListener('click', cerrarModalCuenta);
     
-    // Cerrar modales al hacer click fuera
     document.getElementById('modal-carrito').addEventListener('click', (e) => {
         if (e.target.id === 'modal-carrito') cerrarModalCarrito();
     });
@@ -512,7 +474,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.target.id === 'modal-cuenta') cerrarModalCuenta();
     });
     
-    // Eventos de filtros
     document.querySelectorAll('.btn-filtro').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const categoria = btn.dataset.categoria;

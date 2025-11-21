@@ -1,5 +1,3 @@
-// ============ AUTENTICACIÓN ============
-
 async function verificarAutenticacion() {
     try {
         const response = await fetch('/verificarSesion');
@@ -23,7 +21,6 @@ async function verificarAutenticacion() {
     }
 }
 
-// ============ CARGAR PEDIDOS ============
 
 async function cargarPedidos() {
     try {
@@ -75,9 +72,8 @@ function mostrarPedidos(pedidos) {
         let badgeClase = 'badge-pendiente';
         if (pedido.estado === 'completado' || pedido.estado === 'entregado') badgeClase = 'badge-completado';
         if (pedido.estado === 'cancelado') badgeClase = 'badge-cancelado';
-        if (pedido.estado === 'en_camino') badgeClase = 'badge-pendiente'; // O crea un estilo nuevo
+        if (pedido.estado === 'en_camino') badgeClase = 'badge-pendiente'; 
 
-        // Indicador visual si tiene mapa
         const iconoMapa = (pedido.latitud && pedido.longitud) ? '' : '';
         
         fila.innerHTML = `
@@ -119,16 +115,13 @@ function actualizarEstadisticas(pedidos) {
     document.getElementById('stat-ingresos').textContent = `$${ingresos.toFixed(2)}`;
 }
 
-// ============ VER DETALLE (AQUÍ ESTÁ LA MAGIA DEL MAPA) ============
 
 async function verDetalle(idPedido) {
     try {
-        // Obtener información del pedido
         const responsePedidos = await fetch('/obtenerPedidos');
         const pedidos = await responsePedidos.json();
         const pedido = pedidos.find(p => p.id_pedido === idPedido);
         
-        // Obtener detalles del pedido
         const responseDetalle = await fetch(`/obtenerDetallePedido/${idPedido}`);
         const detalles = await responseDetalle.json();
         
@@ -137,7 +130,6 @@ async function verDetalle(idPedido) {
             return;
         }
         
-        // Mostrar información del pedido
         document.getElementById('numero-pedido').textContent = idPedido;
         
         const fecha = new Date(pedido.fecha);
@@ -149,7 +141,6 @@ async function verDetalle(idPedido) {
             minute: '2-digit'
         });
         
-        // --- AQUÍ CONSTRUIMOS EL HTML DE LA INFO ---
         let infoHTML = `
             <div class="info-row">
                 <span class="info-label">Cliente:</span>
@@ -169,7 +160,6 @@ async function verDetalle(idPedido) {
             </div>
         `;
 
-        // --- AGREGAMOS EL BLOQUE DE MAPA SI EXISTEN COORDENADAS ---
         if (pedido.latitud && pedido.longitud) {
             infoHTML += `
                 <div class="info-row" style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #eee;">
@@ -192,11 +182,9 @@ async function verDetalle(idPedido) {
                 </div>
             `;
         }
-        // ----------------------------------------------------------
 
         document.getElementById('info-pedido').innerHTML = infoHTML;
         
-        // Mostrar productos
         const contenedor = document.getElementById('detalle-productos');
         contenedor.innerHTML = '';
         
@@ -230,10 +218,9 @@ async function verDetalle(idPedido) {
         
         document.getElementById('total-pedido').textContent = `$${parseFloat(pedido.total).toFixed(2)}`;
         
-        // Abrir modal
         const modal = document.getElementById('modal-detalle');
-        modal.style.display = 'flex'; // Asegurar display flex
-        setTimeout(() => modal.classList.add('active'), 10); // Pequeño delay para animación CSS
+        modal.style.display = 'flex'; 
+        setTimeout(() => modal.classList.add('active'), 10); 
         
     } catch (error) {
         console.error('Error al cargar detalle:', error);
@@ -244,10 +231,10 @@ async function verDetalle(idPedido) {
 function cerrarModal() {
     const modal = document.getElementById('modal-detalle');
     modal.classList.remove('active');
-    setTimeout(() => { modal.style.display = 'none'; }, 300); // Esperar a que termine la transición
+    setTimeout(() => { modal.style.display = 'none'; }, 300); 
 }
 
-// ============ CAMBIAR ESTADO ============
+
 
 async function cambiarEstado(idPedido, nuevoEstado) {
     try {
@@ -263,12 +250,11 @@ async function cambiarEstado(idPedido, nuevoEstado) {
         
         if (response.ok) {
             mostrarNotificacion('Estado actualizado correctamente');
-            // No recargamos todo para no perder la posición, solo actualizamos estadísticas si quieres
-            // Pero si prefieres recargar para ver colores nuevos:
+
             setTimeout(cargarPedidos, 500); 
         } else {
             alert('Error al actualizar el estado: ' + data.error);
-            cargarPedidos(); // Recargar para restaurar el estado anterior
+            cargarPedidos(); 
         }
     } catch (error) {
         console.error('Error al cambiar estado:', error);
@@ -277,7 +263,6 @@ async function cambiarEstado(idPedido, nuevoEstado) {
     }
 }
 
-// ============ NAVEGACIÓN ============
 
 function irAProductos() {
     window.location.href = '/index.html';
@@ -292,7 +277,6 @@ async function cerrarSesion() {
     }
 }
 
-// ============ UTILIDADES ============
 
 function mostrarNotificacion(mensaje) {
     const notif = document.createElement('div');
@@ -317,7 +301,6 @@ function mostrarNotificacion(mensaje) {
     }, 2000);
 }
 
-// Agregar animaciones CSS si no existen
 if (!document.getElementById('estilos-animaciones')) {
     const style = document.createElement('style');
     style.id = 'estilos-animaciones';
@@ -334,8 +317,6 @@ if (!document.getElementById('estilos-animaciones')) {
     document.head.appendChild(style);
 }
 
-// ============ INICIALIZAR ============
-
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Página de pedidos cargada');
     
@@ -344,7 +325,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     await cargarPedidos();
     
-    // Manejo del modal
     const modal = document.getElementById('modal-detalle');
     if (modal) {
         modal.addEventListener('click', (e) => {
@@ -354,6 +334,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
     
-    // Recarga los pedidos cada 30 segundos
     setInterval(cargarPedidos, 30000);
 });

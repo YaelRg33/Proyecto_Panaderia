@@ -393,7 +393,6 @@ function abrirModalCuenta() {
                 <p><strong>Email:</strong> ${usuarioActual.email}</p>
                 <p><strong>Rol:</strong> ${usuarioActual.rol === 'admin' ? 'Administrador' : 'Cliente'}</p>
                 ${usuarioActual.rol === 'admin' ? '<button class="btn-login" onclick="irAPanelAdmin()">Ir al Panel de Admin</button>' : ''}
-                <button class="btn-login" onclick="window.location.href='/misPedidos.html'">Mis Pedidos</button>
                 <button class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</button>
             </div>
         `;

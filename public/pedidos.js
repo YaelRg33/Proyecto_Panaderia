@@ -37,7 +37,6 @@ async function cargarPedidos() {
         document.getElementById('tabla-pedidos').innerHTML = `
             <tr>
                 <td colspan="7" class="empty-state">
-                    <div>⚠️</div>
                     <p>Error al cargar los pedidos</p>
                 </td>
             </tr>
@@ -52,7 +51,6 @@ function mostrarPedidos(pedidos) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="7" class="empty-state">
-                    <div>📦</div>
                     <p>No hay pedidos registrados</p>
                 </td>
             </tr>
@@ -75,8 +73,12 @@ function mostrarPedidos(pedidos) {
         });
         
         let badgeClase = 'badge-pendiente';
-        if (pedido.estado === 'completado') badgeClase = 'badge-completado';
+        if (pedido.estado === 'completado' || pedido.estado === 'entregado') badgeClase = 'badge-completado';
         if (pedido.estado === 'cancelado') badgeClase = 'badge-cancelado';
+        if (pedido.estado === 'en_camino') badgeClase = 'badge-pendiente'; // O crea un estilo nuevo
+
+        // Indicador visual si tiene mapa
+        const iconoMapa = (pedido.latitud && pedido.longitud) ? '📍' : '';
         
         fila.innerHTML = `
             <td><strong>#${pedido.id_pedido}</strong></td>
@@ -87,12 +89,15 @@ function mostrarPedidos(pedidos) {
             <td>
                 <select class="select-estado ${badgeClase}" onchange="cambiarEstado(${pedido.id_pedido}, this.value)">
                     <option value="pendiente" ${pedido.estado === 'pendiente' ? 'selected' : ''}>Pendiente</option>
-                    <option value="completado" ${pedido.estado === 'completado' ? 'selected' : ''}>Completado</option>
+                    <option value="en_camino" ${pedido.estado === 'en_camino' ? 'selected' : ''}>En Camino</option>
+                    <option value="entregado" ${pedido.estado === 'entregado' ? 'selected' : ''}>Entregado</option>
                     <option value="cancelado" ${pedido.estado === 'cancelado' ? 'selected' : ''}>Cancelado</option>
                 </select>
             </td>
             <td>
-                <button class="btn-ver" onclick="verDetalle(${pedido.id_pedido})">Ver Detalle</button>
+                <button class="btn-ver" onclick="verDetalle(${pedido.id_pedido})">
+                    ${iconoMapa} Ver Detalle
+                </button>
             </td>
         `;
         
@@ -103,9 +108,9 @@ function mostrarPedidos(pedidos) {
 function actualizarEstadisticas(pedidos) {
     const total = pedidos.length;
     const pendientes = pedidos.filter(p => p.estado === 'pendiente').length;
-    const completados = pedidos.filter(p => p.estado === 'completado').length;
+    const completados = pedidos.filter(p => p.estado === 'entregado' || p.estado === 'completado').length;
     const ingresos = pedidos
-        .filter(p => p.estado === 'completado')
+        .filter(p => p.estado === 'entregado' || p.estado === 'completado')
         .reduce((sum, p) => sum + parseFloat(p.total), 0);
     
     document.getElementById('stat-total').textContent = total;
@@ -114,7 +119,7 @@ function actualizarEstadisticas(pedidos) {
     document.getElementById('stat-ingresos').textContent = `$${ingresos.toFixed(2)}`;
 }
 
-// ============ VER DETALLE ============
+// ============ VER DETALLE (AQUÍ ESTÁ LA MAGIA DEL MAPA) ============
 
 async function verDetalle(idPedido) {
     try {
@@ -144,7 +149,8 @@ async function verDetalle(idPedido) {
             minute: '2-digit'
         });
         
-        document.getElementById('info-pedido').innerHTML = `
+        // --- AQUÍ CONSTRUIMOS EL HTML DE LA INFO ---
+        let infoHTML = `
             <div class="info-row">
                 <span class="info-label">Cliente:</span>
                 <span>${pedido.nombre_usuario}</span>
@@ -162,6 +168,33 @@ async function verDetalle(idPedido) {
                 <span class="badge badge-${pedido.estado}">${pedido.estado.toUpperCase()}</span>
             </div>
         `;
+
+        // --- AGREGAMOS EL BLOQUE DE MAPA SI EXISTEN COORDENADAS ---
+        if (pedido.latitud && pedido.longitud) {
+            infoHTML += `
+                <div class="info-row" style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #eee;">
+                    <span class="info-label"> Entrega:</span>
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                        <a href="https://www.google.com/maps?q=${pedido.latitud},${pedido.longitud}" 
+                           target="_blank" 
+                           style="background-color: #4CAF50; color: white; padding: 8px 12px; text-decoration: none; border-radius: 4px; text-align: center; font-size: 0.9em; font-weight: bold;">
+                           Ver en Google Maps
+                        </a>
+                        <small style="color: #999; font-size: 0.8em;">Lat: ${pedido.latitud}, Lng: ${pedido.longitud}</small>
+                    </div>
+                </div>
+            `;
+        } else {
+            infoHTML += `
+                <div class="info-row" style="margin-top: 15px; color: #999; font-style: italic;">
+                    <span class="info-label">Entrega:</span>
+                    <span>Sin ubicación registrada</span>
+                </div>
+            `;
+        }
+        // ----------------------------------------------------------
+
+        document.getElementById('info-pedido').innerHTML = infoHTML;
         
         // Mostrar productos
         const contenedor = document.getElementById('detalle-productos');
@@ -198,7 +231,9 @@ async function verDetalle(idPedido) {
         document.getElementById('total-pedido').textContent = `$${parseFloat(pedido.total).toFixed(2)}`;
         
         // Abrir modal
-        document.getElementById('modal-detalle').classList.add('active');
+        const modal = document.getElementById('modal-detalle');
+        modal.style.display = 'flex'; // Asegurar display flex
+        setTimeout(() => modal.classList.add('active'), 10); // Pequeño delay para animación CSS
         
     } catch (error) {
         console.error('Error al cargar detalle:', error);
@@ -207,7 +242,9 @@ async function verDetalle(idPedido) {
 }
 
 function cerrarModal() {
-    document.getElementById('modal-detalle').classList.remove('active');
+    const modal = document.getElementById('modal-detalle');
+    modal.classList.remove('active');
+    setTimeout(() => { modal.style.display = 'none'; }, 300); // Esperar a que termine la transición
 }
 
 // ============ CAMBIAR ESTADO ============
@@ -226,7 +263,9 @@ async function cambiarEstado(idPedido, nuevoEstado) {
         
         if (response.ok) {
             mostrarNotificacion('Estado actualizado correctamente');
-            cargarPedidos(); // Recargar para actualizar estadísticas
+            // No recargamos todo para no perder la posición, solo actualizamos estadísticas si quieres
+            // Pero si prefieres recargar para ver colores nuevos:
+            setTimeout(cargarPedidos, 500); 
         } else {
             alert('Error al actualizar el estado: ' + data.error);
             cargarPedidos(); // Recargar para restaurar el estado anterior
@@ -278,31 +317,22 @@ function mostrarNotificacion(mensaje) {
     }, 2000);
 }
 
-// Agregar animaciones CSS
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from {
-            transform: translateX(400px);
-            opacity: 0;
+// Agregar animaciones CSS si no existen
+if (!document.getElementById('estilos-animaciones')) {
+    const style = document.createElement('style');
+    style.id = 'estilos-animaciones';
+    style.textContent = `
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
-        to {
-            transform: translateX(0);
-            opacity: 1;
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(400px); opacity: 0; }
         }
-    }
-    @keyframes slideOut {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(400px);
-            opacity: 0;
-        }
-    }
-`;
-document.head.appendChild(style);
+    `;
+    document.head.appendChild(style);
+}
 
 // ============ INICIALIZAR ============
 
@@ -314,12 +344,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     await cargarPedidos();
     
-    document.getElementById('modal-detalle').addEventListener('click', (e) => {
-        if (e.target.id === 'modal-detalle') {
-            cerrarModal();
-        }
-    });
+    // Manejo del modal
+    const modal = document.getElementById('modal-detalle');
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target.id === 'modal-detalle') {
+                cerrarModal();
+            }
+        });
+    }
     
-    // Recargar pedidos cada 30 segundos
+    // Recarga los pedidos cada 30 segundos
     setInterval(cargarPedidos, 30000);
 });

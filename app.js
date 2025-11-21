@@ -16,7 +16,6 @@ const engine = require('ejs-mate');
 const app = express();
 
 // --- CONFIGURACIÓN DEL SERVIDOR HTTP Y SOCKET.IO ---
-// Creamos el servidor HTTP a partir de Express para poder unirlo con Socket.io
 const server = http.createServer(app);
 const io = socketIO(server);
 // ---------------------------------------------------
@@ -24,7 +23,6 @@ const io = socketIO(server);
 app.set('trust proxy', 1);
 
 // --- CONFIGURACIÓN DE MOTOR DE VISTAS (EJS) ---
-// Agregado del código de Leaflet
 app.engine('ejs', engine);
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -51,6 +49,8 @@ async function crearTablasPedidos() {
             fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             total DECIMAL(10,2) NOT NULL,
             estado VARCHAR(50) DEFAULT 'pendiente',
+            latitud DECIMAL(10, 8) NULL,
+            longitud DECIMAL(11, 8) NULL,
             FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
         )`;
 
@@ -124,9 +124,8 @@ const upload = multer({
 // ============ MIDDLEWARES ============
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public'))); // Ajustado para usar path.join
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Configurar el store de sesiones usando el pool existente
 const sessionStore = new MySQLStore({}, pool);
 
 app.use(session({
@@ -161,7 +160,6 @@ function verificarUsuario(req, res, next) {
 }
 
 // --- RUTAS ADICIONALES DEL LEAFLET ---
-// Nota: Asegúrate de que exista el archivo ./routes/index.js o comenta esta línea si no lo tienes aún
 try {
     app.use(require('./routes/index'));
 } catch (e) {
@@ -374,8 +372,15 @@ app.delete('/vaciarMiCarrito', verificarUsuario, async (req, res) => {
 
 // ============ RUTAS DE PEDIDOS ============
 app.post('/crearPedido', verificarUsuario, async (req, res) => {
-    const { carrito, total } = req.body;
+    const { carrito, total, latitud, longitud } = req.body;
     const id_usuario = req.session.usuario.id;
+
+    // Si quieres validación estricta de ubicación, descomenta esto:
+    /*
+    if (!latitud || !longitud) {
+        return res.status(400).json({ error: "Se requiere ubicación" });
+    }
+    */
 
     let connection;
     try {
@@ -384,7 +389,7 @@ app.post('/crearPedido', verificarUsuario, async (req, res) => {
         
         let erroresStock = [];
         
-        // Verificar stock para cada producto
+        // Verificar stock
         for (const item of carrito) {
             const [productos] = await connection.query(
                 'SELECT nombre, stock FROM productos WHERE id_producto = ? FOR UPDATE', 
@@ -403,10 +408,10 @@ app.post('/crearPedido', verificarUsuario, async (req, res) => {
             return res.status(400).json({ error: erroresStock.join(', ') });
         }
         
-        // Crear pedido
+        // Crear pedido CON LATITUD Y LONGITUD
         const [pedidoResult] = await connection.query(
-            'INSERT INTO pedidos (id_usuario, total) VALUES (?, ?)',
-            [id_usuario, total]
+            'INSERT INTO pedidos (id_usuario, total, latitud, longitud) VALUES (?, ?, ?, ?)',
+            [id_usuario, total, latitud, longitud]
         );
         const id_pedido = pedidoResult.insertId;
         
@@ -444,10 +449,11 @@ app.post('/crearPedido', verificarUsuario, async (req, res) => {
     }
 });
 
-// Resto de las rutas de pedidos
+// --- RUTA ACTUALIZADA: OBTENER PEDIDOS ---
 app.get('/obtenerPedidos', verificarAdmin, async (req, res) => {
+    // Agregado latitud y longitud a la consulta
     const query = `SELECT 
-    p.id_pedido, p.fecha, p.total, p.estado,
+    p.id_pedido, p.fecha, p.total, p.estado, p.latitud, p.longitud,
     u.nombre as nombre_usuario, u.email
 FROM pedidos p
 JOIN usuarios u ON p.id_usuario = u.id_usuario
@@ -512,21 +518,12 @@ app.put('/cambiarEstadoPedido/:id', verificarAdmin, async (req, res) => {
     }
 });
 
-// Health check endpoint
 app.get('/health', async (req, res) => {
     try {
         const [result] = await con.query('SELECT 1 as connected');
-        res.json({ 
-            status: 'OK', 
-            database: 'Connected',
-            timestamp: new Date().toISOString()
-        });
+        res.json({ status: 'OK', database: 'Connected' });
     } catch (error) {
-        res.status(500).json({ 
-            status: 'Error', 
-            database: 'Disconnected',
-            error: error.message 
-        });
+        res.status(500).json({ status: 'Error', error: error.message });
     }
 });
 

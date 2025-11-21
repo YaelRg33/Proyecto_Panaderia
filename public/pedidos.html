@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Pedidos - La DesEsperanza</title>
-<link rel="stylesheet" href="pedidoscss.css">
+    <link rel="stylesheet" href="pedidoscss.css">
 </head>
 <body>
     <header>
@@ -14,7 +14,7 @@
                 <p>Panel de Administración - La DesEsperanza</p>
             </div>
             <div class="header-actions">
-                <span class="user-greeting" id="nombre-usuario"></span>
+                <span class="user-greeting" id="nombre-usuario">Cargando...</span>
                 <button class="btn-header" onclick="irAProductos()">Ver Productos</button>
                 <button class="btn-header" onclick="cerrarSesion()">Cerrar Sesión</button>
             </div>
@@ -46,26 +46,28 @@
                 <h2>Historial de Pedidos</h2>
                 <p>Gestiona y visualiza todos los pedidos realizados</p>
             </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Cliente</th>
-                        <th>Email</th>
-                        <th>Fecha</th>
-                        <th>Total</th>
-                        <th>Estado</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="tabla-pedidos">
-                    <tr>
-                        <td colspan="7" class="empty-state">
-                            <div class="empty-text">Cargando pedidos</div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Cliente</th>
+                            <th>Email</th>
+                            <th>Fecha</th>
+                            <th>Total</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-pedidos">
+                        <tr>
+                            <td colspan="7" class="empty-state">
+                                <div class="empty-text">Cargando pedidos...</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
     

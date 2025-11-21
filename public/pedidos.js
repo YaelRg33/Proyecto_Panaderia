@@ -78,7 +78,7 @@ function mostrarPedidos(pedidos) {
         if (pedido.estado === 'en_camino') badgeClase = 'badge-pendiente'; // O crea un estilo nuevo
 
         // Indicador visual si tiene mapa
-        const iconoMapa = (pedido.latitud && pedido.longitud) ?  '';
+        const iconoMapa = (pedido.latitud && pedido.longitud) ? '' : '';
         
         fila.innerHTML = `
             <td><strong>#${pedido.id_pedido}</strong></td>

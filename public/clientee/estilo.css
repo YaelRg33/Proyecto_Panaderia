@@ -294,7 +294,25 @@ body {
     border-radius: 10px;
     margin-bottom: 15px;
 }
+.btn-monto-rapido {
+    padding: 8px 16px;
+    background: #f0f0f0;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+}
 
+.btn-monto-rapido:hover {
+    background: #8B4513;
+    color: white;
+    border-color: #8B4513;
+}
+
+#contenido-ticket {
+    font-family: 'Courier New', monospace;
+}
 .item-imagen {
     width: 80px;
     height: 80px;

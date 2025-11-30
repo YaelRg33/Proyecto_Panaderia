@@ -7,6 +7,294 @@ let map = null;
 let marker = null;
 let ubicacionSeleccionada = null;
 
+let saldoActual = 0;
+
+async function cargarFondos() {
+    if (!usuarioActual) return;
+    try {
+        const response = await fetch('/obtenerFondos');
+        const data = await response.json();
+        if (response.ok) {
+            saldoActual = parseFloat(data.fondos);
+            actualizarDisplayFondos();
+        }
+    } catch (error) {
+        console.error('Error al cargar fondos:', error);
+    }
+}
+
+function actualizarDisplayFondos() {
+    const elemento = document.getElementById('saldo-actual');
+    if (elemento) {
+        elemento.textContent = saldoActual.toFixed(2);
+    }
+    const displayHeader = document.getElementById('fondos-header');
+    if (displayHeader) {
+        displayHeader.textContent = `$${saldoActual.toFixed(2)}`;
+    }
+}
+
+async function agregarFondos(monto) {
+    const btn = document.getElementById('btn-agregar-fondos');
+    if (!btn) {
+        console.error('Botón de agregar fondos no encontrado.');
+        return;
+    }
+    const textoOriginal = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Procesando...';
+    try {
+        const response = await fetch('/agregarFondos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ monto: monto })
+        });
+        const data = await response.json();
+        if (response.ok) {
+            saldoActual = parseFloat(data.fondos);
+            actualizarDisplayFondos();
+            const inputMonto = document.getElementById('input-monto');
+            if (inputMonto) inputMonto.value = '';
+            mostrarNotificacion('✅ Fondos agregados exitosamente');
+            cargarHistorialTransacciones();
+        } else {
+            alert('❌ ' + data.error);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error de conexión');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = textoOriginal;
+    }
+}
+
+async function cargarHistorialTransacciones() {
+    const contenedor = document.getElementById('historial-transacciones');
+    if (!contenedor) return;
+    try {
+        const response = await fetch('/obtenerTransacciones');
+        const transacciones = await response.json();
+        if (transacciones.length === 0) {
+            contenedor.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No hay transacciones</p>';
+            return;
+        }
+        contenedor.innerHTML = '';
+        transacciones.forEach(t => {
+            const div = document.createElement('div');
+            div.style.cssText = 'padding: 15px; background: white; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid ' +
+                (t.tipo === 'deposito' ? '#4CAF50' : '#f44336');
+            const fecha = new Date(t.fecha).toLocaleString('es-MX');
+            const icono = t.tipo === 'deposito' ? '💰' : '🛒';
+            const signo = t.tipo === 'deposito' ? '+' : '-';
+            const color = t.tipo === 'deposito' ? '#4CAF50' : '#f44336';
+            div.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: 600;">${icono} ${t.descripcion}</div>
+                        <div style="font-size: 12px; color: #666;">${fecha}</div>
+                    </div>
+                    <div style="font-weight: 700; font-size: 18px; color: ${color};">
+                        ${signo}$${parseFloat(t.monto).toFixed(2)}
+                    </div>
+                </div>
+                <div style="margin-top: 8px; font-size: 12px; color: #999;">
+                    Saldo: $${parseFloat(t.saldo_anterior).toFixed(2)} &rarr; $${parseFloat(t.saldo_nuevo).toFixed(2)}
+                </div>
+            `;
+            contenedor.appendChild(div);
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        contenedor.innerHTML = '<p style="text-align: center; color: #f44336; padding: 20px;">Error al cargar historial</p>';
+    }
+}
+
+function abrirModalFondos() {
+    const modalFondos = document.getElementById('modal-fondos');
+    if (!modalFondos) {
+        console.error('Modal de fondos no encontrado.');
+        return;
+    }
+    if (!usuarioActual) {
+        alert('Debes iniciar sesión para usar esta función');
+        window.location.href = '/login.html';
+        return;
+    }
+    cargarFondos();
+    cargarHistorialTransacciones();
+    modalFondos.classList.add('active');
+}
+
+function cerrarModalFondos() {
+    const modalFondos = document.getElementById('modal-fondos');
+    if (modalFondos) {
+        modalFondos.classList.remove('active');
+    }
+}
+
+async function mostrarTicket(idPedido) {
+    const modalTicket = document.getElementById('modal-ticket');
+    const contenidoTicket = document.getElementById('contenido-ticket');
+    if (!modalTicket || !contenidoTicket) {
+        console.error('Elementos del modal de ticket no encontrados.');
+        return;
+    }
+    try {
+        const response = await fetch(`/obtenerTicket/${idPedido}`);
+        const data = await response.json();
+        if (!response.ok) {
+            alert('Error al obtener ticket: ' + data.error);
+            return;
+        }
+        const { pedido, detalles } = data;
+        const fecha = new Date(pedido.fecha);
+        const fechaFormateada = fecha.toLocaleString('es-MX', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        let productosHTML = '';
+        detalles.forEach(item => {
+            productosHTML += `
+                <tr>
+                    <td style="text-align: left; padding: 5px 0;">${item.nombre_producto}</td>
+                    <td style="text-align: center; padding: 5px 0;">${item.cantidad}</td>
+                    <td style="text-align: right; padding: 5px 0;">$${parseFloat(item.precio_unitario).toFixed(2)}</td>
+                    <td style="text-align: right; padding: 5px 0;">$${parseFloat(item.subtotal).toFixed(2)}</td>
+                </tr>
+            `;
+        });
+        const ticketHTML = `
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="margin: 0; color: #8B4513;">🍞 La DesEsperanza</h2>
+                <p style="margin: 5px 0; font-size: 14px;">Panadería Artesanal</p>
+                <p style="margin: 5px 0; font-size: 12px;">RFC: DESXXX010101XXX</p>
+            </div>
+            <div style="border-top: 2px dashed #333; border-bottom: 2px dashed #333; padding: 15px 0; margin: 15px 0;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <strong>Ticket:</strong>
+                    <span>#${pedido.id_pedido}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <strong>Fecha:</strong>
+                    <span>${fechaFormateada}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <strong>Cliente:</strong>
+                    <span>${pedido.nombre_usuario}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <strong>Estado:</strong>
+                    <span>${pedido.estado.toUpperCase()}</span>
+                </div>
+            </div>
+            <table style="width: 100%; margin: 20px 0;">
+                <thead>
+                    <tr style="border-bottom: 1px solid #333;">
+                        <th style="text-align: left; padding: 5px 0;">Producto</th>
+                        <th style="text-align: center; padding: 5px 0;">Cant.</th>
+                        <th style="text-align: right; padding: 5px 0;">Precio</th>
+                        <th style="text-align: right; padding: 5px 0;">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${productosHTML}
+                </tbody>
+            </table>
+            <div style="border-top: 2px dashed #333; padding-top: 15px; margin-top: 15px;">
+                <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: bold;">
+                    <span>TOTAL:</span>
+                    <span>$${parseFloat(pedido.total).toFixed(2)}</span>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #666;">
+                <p>¡Gracias por su compra!</p>
+                <p>Pedido #${pedido.id_pedido}</p>
+                ${pedido.latitud && pedido.longitud ? '<p>📍 Entrega programada</p>' : ''}
+            </div>
+        `;
+        contenidoTicket.innerHTML = ticketHTML;
+        modalTicket.classList.add('active');
+        window.ticketActual = { pedido, detalles };
+    } catch (error) {
+        console.error('Error al mostrar ticket:', error);
+        alert('Error al generar el ticket');
+    }
+}
+
+function cerrarModalTicket() {
+    const modalTicket = document.getElementById('modal-ticket');
+    if (modalTicket) {
+        modalTicket.classList.remove('active');
+    }
+}
+
+function imprimirTicket() {
+    if (!window.ticketActual) {
+        alert('No hay ticket para imprimir.');
+        return;
+    }
+    const contenido = document.getElementById('contenido-ticket').innerHTML;
+    const ventana = window.open('', '_blank');
+    ventana.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Ticket - La DesEsperanza</title>
+            <style>
+                body { 
+                    font-family: 'Courier New', monospace; 
+                    padding: 20px;
+                    max-width: 400px;
+                    margin: 0 auto;
+                }
+                @media print {
+                    body { padding: 0; }
+                }
+            </style>
+        </head>
+        <body>${contenido}</body>
+        </html>
+    `);
+    ventana.document.close();
+    ventana.print();
+}
+
+function descargarTicket() {
+    if (!window.ticketActual) {
+        alert('No hay ticket para descargar.');
+        return;
+    }
+    const contenido = document.getElementById('contenido-ticket').innerHTML;
+    const blob = new Blob([`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Ticket - La DesEsperanza</title>
+            <style>
+                body { 
+                    font-family: 'Courier New', monospace; 
+                    padding: 20px;
+                    max-width: 400px;
+                    margin: 0 auto;
+                }
+            </style>
+        </head>
+        <body>${contenido}</body>
+        </html>
+    `], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ticket_${window.ticketActual.pedido.id_pedido}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
 async function verificarSesion() {
     try {
         const response = await fetch('/verificarSesion');
@@ -14,6 +302,7 @@ async function verificarSesion() {
         if (data.autenticado) {
             usuarioActual = data.usuario;
             mostrarInfoUsuario();
+            await cargarFondos(); 
         } else {
             mostrarOpcionLogin();
         }
@@ -56,19 +345,16 @@ async function cargarCategorias() {
     }
 }
 
-
 function mostrarProductos() {
     const grid = document.getElementById('grid-productos');
     grid.innerHTML = '';
     const productosFiltrados = categoriaActual === 'todas'
         ? productos
         : productos.filter(p => p.id_categoria == categoriaActual);
-
     if (productosFiltrados.length === 0) {
         grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 40px; color: #999;">No hay productos en esta categoría</p>';
         return;
     }
-    
     productosFiltrados.forEach(producto => {
         const card = crearCardProducto(producto);
         grid.appendChild(card);
@@ -81,8 +367,8 @@ function crearCardProducto(producto) {
     const categoria = categorias.find(c => c.id_categoria == producto.id_categoria);
     const nombreCategoria = categoria ? categoria.nombre : 'Sin categoría';
     const imagenHTML = producto.img
-        ? `<img src="${producto.img}" alt="${producto.nombre}">`
-        : '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #999;">Sin imagen</div>';
+        ? `<img src="${producto.img}" alt="${producto.nombre}" class="producto-imagen">`
+        : '<div class="producto-imagen-placeholder" style="display: flex; align-items: center; justify-content: center; height: 100%; color: #999;">Sin imagen</div>';
     const stockDisponible = producto.stock > 0;
     const textoStock = stockDisponible
         ? `Stock: ${producto.stock}`
@@ -171,9 +457,7 @@ function actualizarCarrito() {
 function mostrarItemsCarrito() {
     const contenedor = document.getElementById('items-carrito');
     const totalSpan = document.getElementById('total-carrito');
-    
     if (!contenedor || !totalSpan) return;
-
     if (carrito.length === 0) {
         contenedor.innerHTML = '<p class="carrito-vacio">Tu carrito está vacío</p>';
         totalSpan.textContent = '0.00';
@@ -221,25 +505,19 @@ function irAlMapa() {
         }
         return;
     }
-
     document.getElementById('vista-lista-productos').style.display = 'none';
     document.getElementById('vista-mapa-ubicacion').style.display = 'block';
-    
     document.getElementById('botones-carrito').style.display = 'none';
     document.getElementById('botones-mapa').style.display = 'flex';
-
     document.getElementById('titulo-modal-carrito').innerText = "Confirmar Ubicación";
-
     initMap();
 }
 
 function volverALista() {
     document.getElementById('vista-mapa-ubicacion').style.display = 'none';
     document.getElementById('vista-lista-productos').style.display = 'block';
-    
     document.getElementById('botones-mapa').style.display = 'none';
     document.getElementById('botones-carrito').style.display = 'flex'; 
-
     document.getElementById('titulo-modal-carrito').innerText = "Mi Carrito";
 }
 
@@ -248,27 +526,20 @@ function initMap() {
         setTimeout(() => { map.invalidateSize(); }, 100);
         return;
     }
-
     const lat = 19.4326; 
     const lng = -99.1332;
-
     map = L.map('mapa-seleccion').setView([lat, lng], 15);
-
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap'
     }).addTo(map);
-
     map.locate({enableHighAccuracy: true});
-
     map.on('locationfound', (e) => {
         actualizarMarcador(e.latlng);
         map.flyTo(e.latlng, 16);
     });
-
     map.on('click', (e) => {
         actualizarMarcador(e.latlng);
     });
-    
     setTimeout(() => { map.invalidateSize(); }, 200);
 }
 
@@ -277,7 +548,6 @@ function actualizarMarcador(latlng) {
         marker.setLatLng(latlng);
     } else {
         marker = L.marker(latlng, {draggable: true}).addTo(map);
-        
         marker.on('dragend', function(e) {
             ubicacionSeleccionada = e.target.getLatLng();
             document.getElementById('coords-info').innerText = `Ubicación: ${ubicacionSeleccionada.lat.toFixed(5)}, ${ubicacionSeleccionada.lng.toFixed(5)}`;
@@ -292,13 +562,29 @@ async function confirmarPedidoFinal() {
         alert("Por favor selecciona tu ubicación en el mapa.");
         return;
     }
-
     const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-    
+    if (!usuarioActual) {
+        alert('Debes iniciar sesión para realizar una compra');
+        window.location.href = '/login.html';
+        return;
+    }
+    if (saldoActual < total) {
+        if (confirm(`❌ Fondos insuficientes.\n\nTienes: $${saldoActual.toFixed(2)}\nNecesitas: $${total.toFixed(2)}\n\n¿Deseas recargar fondos?`)) {
+            cerrarModalCarrito();
+            abrirModalFondos();
+        }
+        return;
+    }
+    if (saldoActual === 0) {
+        if (confirm('❌ No tienes fondos disponibles.\n\n¿Deseas recargar tu cuenta?')) {
+            cerrarModalCarrito();
+            abrirModalFondos();
+        }
+        return;
+    }
     const btnConfirmar = document.getElementById('btn-confirmar-pedido');
     btnConfirmar.disabled = true;
-    btnConfirmar.textContent = 'Enviando...';
-    
+    btnConfirmar.textContent = 'Procesando...';
     try {
         const response = await fetch('/crearPedido', {
             method: 'POST',
@@ -310,28 +596,24 @@ async function confirmarPedidoFinal() {
                 longitud: ubicacionSeleccionada.lng
             })
         });
-        
         const data = await response.json();
-        
         if (response.ok) {
-            const mensaje = `¡Pedido realizado!\nID: ${data.id_pedido}\nTotal: $${total.toFixed(2)}\n\nLlegará a la ubicación seleccionada.`;
-            alert(mensaje);
-        
+            saldoActual = parseFloat(data.nuevo_saldo);
+            actualizarDisplayFondos();
             carrito = [];
             actualizarCarrito();
             await cargarProductos();
-            
             cerrarModalCarrito();
             ubicacionSeleccionada = null;
             if(marker) { map.removeLayer(marker); marker = null; }
             volverALista();
-            
+            mostrarTicket(data.id_pedido);
         } else {
-            alert('Error: ' + data.error);
+            alert('❌ Error: ' + data.error);
         }
     } catch (error) {
         console.error('Error al finalizar compra:', error);
-        alert('Error de conexión.');
+        alert('❌ Error de conexión.');
     } finally {
         btnConfirmar.disabled = false;
         btnConfirmar.textContent = 'Confirmar Pedido';
@@ -365,6 +647,13 @@ function abrirModalCuenta() {
                 <p><strong>Nombre:</strong> ${usuarioActual.nombre}</p>
                 <p><strong>Email:</strong> ${usuarioActual.email}</p>
                 <p><strong>Rol:</strong> ${usuarioActual.rol === 'admin' ? 'Administrador' : 'Cliente'}</p>
+                <p><strong>Fondos Disponibles:</strong> <span style="color: #4CAF50; font-size: 20px; font-weight: bold;">$${saldoActual.toFixed(2)}</span></p>
+                <button class="btn-login" onclick="abrirModalFondos(); cerrarModalCuenta();" style="background: #4CAF50;">
+                    💰 Gestionar Fondos
+                </button>
+                <button class="btn-login" onclick="verMisPedidos()">
+                    📦 Mis Pedidos
+                </button>
                 ${usuarioActual.rol === 'admin' ? '<button class="btn-login" onclick="irAPanelAdmin()">Ir al Panel de Admin</button>' : ''}
                 <button class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</button>
             </div>
@@ -383,10 +672,39 @@ function abrirModalCuenta() {
     document.getElementById('modal-cuenta').classList.add('active');
 }
 
+async function verMisPedidos() {
+    cerrarModalCuenta();
+    try {
+        const response = await fetch('/misPedidos');
+        const pedidos = await response.json();
+        if (pedidos.length === 0) {
+            alert('No tienes pedidos aún');
+            return;
+        }
+        let html = 'MIS PEDIDOS:\n\n';
+        pedidos.forEach(p => {
+            const fecha = new Date(p.fecha).toLocaleDateString('es-MX');
+            html += `Pedido #${p.id_pedido}\n`;
+            html += `Fecha: ${fecha}\n`;
+            html += `Total: $${parseFloat(p.total).toFixed(2)}\n`;
+            html += `Estado: ${p.estado.toUpperCase()}\n`;
+            html += `------------------------\n`;
+        });
+        if (confirm(html + '\n¿Deseas ver el ticket de algún pedido?')) {
+            const idPedido = prompt('Ingresa el número de pedido:');
+            if (idPedido) {
+                mostrarTicket(parseInt(idPedido));
+            }
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al cargar pedidos');
+    }
+}
+
 function cerrarModalCuenta() {
     document.getElementById('modal-cuenta').classList.remove('active');
 }
-
 
 function irALogin() {
     window.location.href = '/login.html';
@@ -446,34 +764,25 @@ document.head.appendChild(style);
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Tienda cargada');
-
     await verificarSesion();
     await cargarCategorias();
     await cargarProductos();
-
     document.getElementById('btn-carrito').addEventListener('click', abrirModalCarrito);
     document.getElementById('cerrar-carrito').addEventListener('click', cerrarModalCarrito);
-    document.getElementById('btn-vaciar').addEventListener('click', vaciarCarrito);
-    
     const btnIrPagar = document.getElementById('btn-ir-pagar');
     if(btnIrPagar) btnIrPagar.addEventListener('click', irAlMapa);
-
     const btnVolver = document.getElementById('btn-volver-lista');
     if(btnVolver) btnVolver.addEventListener('click', volverALista);
-
     const btnConfirmar = document.getElementById('btn-confirmar-pedido');
     if(btnConfirmar) btnConfirmar.addEventListener('click', confirmarPedidoFinal);
-    
     document.getElementById('btn-cuenta').addEventListener('click', abrirModalCuenta);
     document.getElementById('cerrar-cuenta').addEventListener('click', cerrarModalCuenta);
-    
     document.getElementById('modal-carrito').addEventListener('click', (e) => {
         if (e.target.id === 'modal-carrito') cerrarModalCarrito();
     });
     document.getElementById('modal-cuenta').addEventListener('click', (e) => {
         if (e.target.id === 'modal-cuenta') cerrarModalCuenta();
     });
-    
     document.querySelectorAll('.btn-filtro').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const categoria = btn.dataset.categoria;
@@ -483,4 +792,61 @@ document.addEventListener('DOMContentLoaded', async () => {
             mostrarProductos();
         });
     });
+    const btnCerrarFondos = document.getElementById('cerrar-fondos');
+    if (btnCerrarFondos) {
+        btnCerrarFondos.addEventListener('click', cerrarModalFondos);
+    }
+    const btnAgregarFondos = document.getElementById('btn-agregar-fondos');
+    if (btnAgregarFondos) {
+        btnAgregarFondos.addEventListener('click', () => {
+            const monto = parseFloat(document.getElementById('input-monto').value);
+            if (isNaN(monto) || monto <= 0) {
+                alert('Por favor ingresa un monto válido');
+                return;
+            }
+            if (monto > 999999999999) {
+                alert('El monto excede el límite permitido (999,999,999,999)');
+                return;
+            }
+            agregarFondos(monto);
+        });
+    }
+    document.querySelectorAll('.btn-monto-rapido').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const monto = parseFloat(btn.dataset.monto);
+            agregarFondos(monto);
+        });
+    });
+    const inputMonto = document.getElementById('input-monto');
+    if (inputMonto && btnAgregarFondos) {
+        inputMonto.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                btnAgregarFondos.click();
+            }
+        });
+    }
+    const btnCerrarTicket = document.getElementById('cerrar-ticket');
+    if (btnCerrarTicket) {
+        btnCerrarTicket.addEventListener('click', cerrarModalTicket);
+    }
+    const btnImprimirTicket = document.getElementById('btn-imprimir-ticket');
+    if (btnImprimirTicket) {
+        btnImprimirTicket.addEventListener('click', imprimirTicket);
+    }
+    const btnDescargarTicket = document.getElementById('btn-descargar-ticket');
+    if (btnDescargarTicket) {
+        btnDescargarTicket.addEventListener('click', descargarTicket);
+    }
+    const modalFondos = document.getElementById('modal-fondos');
+    if(modalFondos) {
+        modalFondos.addEventListener('click', (e) => {
+            if (e.target.id === 'modal-fondos') cerrarModalFondos();
+        });
+    }
+    const modalTicket = document.getElementById('modal-ticket');
+    if(modalTicket) {
+        modalTicket.addEventListener('click', (e) => {
+            if (e.target.id === 'modal-ticket') cerrarModalTicket();
+        });
+    }
 });

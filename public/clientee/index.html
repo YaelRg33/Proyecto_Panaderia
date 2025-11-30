@@ -12,24 +12,28 @@
 </style>
 </head>
 <body>
-    <!-- Header -->
     <header class="header">
-        <div class="container-header">
-            <div class="logo">
-                <h1>La DesEsperanza</h1>
-                <p>Panadería Artesanal</p>
-            </div>
-            <nav class="nav">
-                <span id="nombre-usuario" class="usuario-info"></span>
-                <button id="btn-carrito" class="btn-carrito">
-                    Carrito (<span id="contador-carrito">0</span>)
-                </button>
-                <button id="btn-cuenta" class="btn-cuenta">Mi Cuenta</button>
-            </nav>
+<header class="header">
+    <div class="container-header">
+        <div class="logo">
+            <h1>La DesEsperanza</h1>
+            <p>Panadería Artesanal</p>
         </div>
+        <nav class="nav">
+            <span id="nombre-usuario" class="usuario-info"></span>
+            
+            <button id="btn-abrir-fondos" class="btn-carrito" style="background: #4CAF50; border-color: #4CAF50;">
+                 <span id="fondos-header">$0.00</span>
+            </button>
+            
+            <button id="btn-carrito" class="btn-carrito">
+                Carrito (<span id="contador-carrito">0</span>)
+            </button>
+            <button id="btn-cuenta" class="btn-cuenta">Mi Cuenta</button>
+        </nav>
+    </div>
+</header>
     </header>
-
-    <!-- Filtros -->
     <section class="filtros">
         <div class="container">
             <h2>Nuestros Productos</h2>
@@ -43,16 +47,13 @@
         </div>
     </section>
 
-    <!-- Productos -->
     <section class="productos">
         <div class="container">
             <div id="grid-productos" class="grid-productos">
-                <!-- Los productos se cargan aquí -->
             </div>
         </div>
     </section>
 
-    <!-- Modal del Carrito -->
 <div id="modal-carrito" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -93,7 +94,6 @@
         </div>
     </div>
 
-    <!-- Modal de Cuenta -->
     <div id="modal-cuenta" class="modal">
         <div class="modal-content modal-cuenta">
             <div class="modal-header">
@@ -107,6 +107,85 @@
             </div>
         </div>
     </div>
+<div id="modal-fondos" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Fondos</h2>
+            <button class="btn-cerrar" id="cerrar-fondos">&times;</button>
+        </div>
+        
+        <div class="modal-body">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <p style="color: #666; margin-bottom: 10px;">Saldo Disponible</p>
+                <h1 style="color: #4CAF50; font-size: 48px; margin: 0;">$<span id="saldo-actual">0.00</span></h1>
+            </div>
+            
+            <div style="background: #f9f9f9; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                <h3 style="margin-bottom: 15px; color: #333;">Agregar Fondos</h3>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <input 
+                        type="number" 
+                        id="input-monto" 
+                        placeholder="Ingresa el monto"
+                        min="1"
+                        max="999999999999"
+                        step="0.01"
+                        style="flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;"
+                    >
+                    <button 
+                        id="btn-agregar-fondos"
+                        style="padding: 12px 30px; background: #4CAF50; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;"
+                    >
+                        Agregar
+                    </button>
+                </div>
+                
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn-monto-rapido" data-monto="100">+$100</button>
+                    <button class="btn-monto-rapido" data-monto="500">+$500</button>
+                    <button class="btn-monto-rapido" data-monto="1000">+$1,000</button>
+                    <button class="btn-monto-rapido" data-monto="5000">+$5,000</button>
+                </div>
+            </div>
+            
+            <div>
+                <h3 style="margin-bottom: 15px; color: #333;">Historial de Transacciones</h3>
+                <div id="historial-transacciones" style="max-height: 300px; overflow-y: auto;">
+                    <p style="text-align: center; color: #999; padding: 20px;">Cargando...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="modal-ticket" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h2>Ticket de Compra</h2>
+            <button class="btn-cerrar" id="cerrar-ticket">&times;</button>
+        </div>
+        
+        <div class="modal-body">
+            <div id="contenido-ticket" style="background: white; padding: 30px; border: 2px dashed #8B4513; border-radius: 10px;">
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button 
+                    id="btn-imprimir-ticket"
+                    style="flex: 1; padding: 12px; background: #8B4513; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;"
+                >
+                     Imprimir
+                </button>
+                <button 
+                    id="btn-descargar-ticket"
+                    style="flex: 1; padding: 12px; background: #4CAF50; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;"
+                >
+                     Descargar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
     <script src="mainClient.js"></script>
 </body>

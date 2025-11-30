@@ -1,4 +1,4 @@
-require('dotenv').config(); 
+require('dotenv').config();
 const express = require("express");
 const mysql = require("mysql2");
 const path = require('path');
@@ -6,27 +6,19 @@ const bodyParser = require('body-parser');
 const multer = require('multer');
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
-
-// --- NUEVOS IMPORTS PARA SOCKET.IO Y LEAFLET ---
-const http = require('http'); 
+const http = require('http');
 const socketIO = require('socket.io');
-const engine = require('ejs-mate'); 
-// -----------------------------------------------
-
+const engine = require('ejs-mate');
 const app = express();
 
-// --- CONFIGURACIÓN DEL SERVIDOR HTTP Y SOCKET.IO ---
 const server = http.createServer(app);
 const io = socketIO(server);
-// ---------------------------------------------------
 
 app.set('trust proxy', 1);
 
-// --- CONFIGURACIÓN DE MOTOR DE VISTAS (EJS) ---
 app.engine('ejs', engine);
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-// ----------------------------------------------
 
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
@@ -63,32 +55,54 @@ async function crearTablasPedidos() {
             subtotal DECIMAL(10,2) NOT NULL,
             FOREIGN KEY (id_pedido) REFERENCES pedidos(id_pedido)
         )`;
+        
+        // Se añade la tabla de transacciones de fondos
+        const tablaTransaccionesFondos = `CREATE TABLE IF NOT EXISTS transacciones_fondos (
+            id_transaccion INT PRIMARY KEY AUTO_INCREMENT,
+            id_usuario INT NOT NULL,
+            tipo VARCHAR(50) NOT NULL, -- 'deposito' o 'compra'
+            monto DECIMAL(15,2) NOT NULL,
+            saldo_anterior DECIMAL(15,2) NOT NULL,
+            saldo_nuevo DECIMAL(15,2) NOT NULL,
+            fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            descripcion VARCHAR(255),
+            FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
+        )`;
 
         await con.query(tablaPedidos);
         await con.query(tablaDetalle);
+        await con.query(tablaTransaccionesFondos);
+
+        // Se verifica si la columna 'fondos' existe en la tabla 'usuarios'
+        const [columnasUsuarios] = await con.query(`SHOW COLUMNS FROM usuarios LIKE 'fondos'`);
+        if (columnasUsuarios.length === 0) {
+            await con.query(`ALTER TABLE usuarios ADD fondos DECIMAL(15,2) DEFAULT 0.00`);
+            console.log(' Columna "fondos" añadida a la tabla "usuarios".');
+        }
+
     } catch (err) {
-        console.log(' Error creando tablas de pedidos:', err.message);
+        console.log(' Error creando tablas de pedidos/transacciones:', err.message);
     }
 }
 
 async function insertarCategoriasIniciales() {
-        const [categoriaActuales] = await con.query('SELECT COUNT(*) as total FROM categorias');
-        if (categoriaActuales[0].total > 0) {
-            return;
-        }
-        const categorias = ['Pan Blanco', 'Pan de Dulce', 'Repostería', 'Especiales'];
-        const query = 'INSERT INTO categorias (nombre) VALUES (?)';
-        for (const nombre of categorias) {
-            await con.query(query, [nombre]);
-        }
+    const [categoriaActuales] = await con.query('SELECT COUNT(*) as total FROM categorias');
+    if (categoriaActuales[0].total > 0) {
+        return;
+    }
+    const categorias = ['Pan Blanco', 'Pan de Dulce', 'Repostería', 'Especiales'];
+    const query = 'INSERT INTO categorias (nombre) VALUES (?)';
+    for (const nombre of categorias) {
+        await con.query(query, [nombre]);
+    }
 }
 
 async function inicializarApp() {
     try {
         const [rows] = await con.query('SELECT 1 as connected');
         console.log(' Conectado a la BD');
+        await crearTablasPedidos(); // Se llama primero para asegurar que las tablas y columnas existan
         await insertarCategoriasIniciales();
-        await crearTablasPedidos();
     } catch (err) {
         console.log(' Error en inicialización:', err.message);
     }
@@ -370,26 +384,145 @@ app.delete('/vaciarMiCarrito', verificarUsuario, async (req, res) => {
     }
 });
 
-// ============ RUTAS DE PEDIDOS ============
+app.get('/obtenerFondos', verificarUsuario, async (req, res) => {
+    const id_usuario = req.session.usuario.id;
+    
+    try {
+        const [resultado] = await con.query(
+            'SELECT fondos FROM usuarios WHERE id_usuario = ?',
+            [id_usuario]
+        );
+        
+        if (resultado.length === 0) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+        
+        res.json({ fondos: resultado[0].fondos });
+    } catch (err) {
+        console.error('Error obteniendo fondos:', err.message);
+        res.status(500).json({ error: 'Error al obtener fondos' });
+    }
+});
+
+app.post('/agregarFondos', verificarUsuario, async (req, res) => {
+    const id_usuario = req.session.usuario.id;
+    let { monto } = req.body;
+    
+    monto = parseFloat(monto);
+    
+    if (isNaN(monto) || monto <= 0) {
+        return res.status(400).json({ error: 'Monto inválido' });
+    }
+    
+    if (monto > 999999999999) {
+        return res.status(400).json({ error: 'El monto excede el límite permitido' });
+    }
+    
+    let connection;
+    try {
+        connection = await con.getConnection();
+        await connection.beginTransaction();
+        
+        const [usuario] = await connection.query(
+            'SELECT fondos FROM usuarios WHERE id_usuario = ? FOR UPDATE',
+            [id_usuario]
+        );
+        
+        if (usuario.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+        
+        const saldoAnterior = parseFloat(usuario[0].fondos);
+        const saldoNuevo = saldoAnterior + monto;
+        
+        if (saldoNuevo > 999999999999) {
+            await connection.rollback();
+            return res.status(400).json({ 
+                error: 'No se puede agregar esa cantidad. Excede el límite de fondos permitido (999,999,999,999)' 
+            });
+        }
+        
+        await connection.query(
+            'UPDATE usuarios SET fondos = ? WHERE id_usuario = ?',
+            [saldoNuevo, id_usuario]
+        );
+        
+        await connection.query(
+            'INSERT INTO transacciones_fondos (id_usuario, tipo, monto, saldo_anterior, saldo_nuevo, descripcion) VALUES (?, ?, ?, ?, ?, ?)',
+            [id_usuario, 'deposito', monto, saldoAnterior, saldoNuevo, 'Depósito de fondos']
+        );
+        
+        await connection.commit();
+        
+        res.json({
+            mensaje: 'Fondos agregados exitosamente',
+            fondos: saldoNuevo
+        });
+        
+    } catch (err) {
+        if (connection) await connection.rollback();
+        console.error('Error agregando fondos:', err.message);
+        res.status(500).json({ error: 'Error al agregar fondos' });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+app.get('/obtenerTransacciones', verificarUsuario, async (req, res) => {
+    const id_usuario = req.session.usuario.id;
+    
+    try {
+        const [transacciones] = await con.query(
+            'SELECT * FROM transacciones_fondos WHERE id_usuario = ? ORDER BY fecha DESC LIMIT 50',
+            [id_usuario]
+        );
+        
+        res.json(transacciones);
+    } catch (err) {
+        console.error('Error obteniendo transacciones:', err.message);
+        res.status(500).json({ error: 'Error al obtener transacciones' });
+    }
+});
+
 app.post('/crearPedido', verificarUsuario, async (req, res) => {
     const { carrito, total, latitud, longitud } = req.body;
     const id_usuario = req.session.usuario.id;
-
-    // Si quieres validación estricta de ubicación, descomenta esto:
-    /*
-    if (!latitud || !longitud) {
-        return res.status(400).json({ error: "Se requiere ubicación" });
-    }
-    */
 
     let connection;
     try {
         connection = await con.getConnection();
         await connection.beginTransaction();
         
+        const [usuario] = await connection.query(
+            'SELECT fondos FROM usuarios WHERE id_usuario = ? FOR UPDATE',
+            [id_usuario]
+        );
+        
+        if (usuario.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+        
+        const fondosActuales = parseFloat(usuario[0].fondos);
+        const totalPedido = parseFloat(total);
+        
+        if (fondosActuales < totalPedido) {
+            await connection.rollback();
+            return res.status(400).json({ 
+                error: `Fondos insuficientes. Tienes $${fondosActuales.toFixed(2)} y necesitas $${totalPedido.toFixed(2)}` 
+            });
+        }
+        
+        if (fondosActuales === 0) {
+            await connection.rollback();
+            return res.status(400).json({ 
+                error: 'No tienes fondos disponibles. Por favor recarga tu cuenta.' 
+            });
+        }
+        
         let erroresStock = [];
         
-        // Verificar stock
         for (const item of carrito) {
             const [productos] = await connection.query(
                 'SELECT nombre, stock FROM productos WHERE id_producto = ? FOR UPDATE', 
@@ -408,14 +541,12 @@ app.post('/crearPedido', verificarUsuario, async (req, res) => {
             return res.status(400).json({ error: erroresStock.join(', ') });
         }
         
-        // Crear pedido CON LATITUD Y LONGITUD
         const [pedidoResult] = await connection.query(
             'INSERT INTO pedidos (id_usuario, total, latitud, longitud) VALUES (?, ?, ?, ?)',
-            [id_usuario, total, latitud, longitud]
+            [id_usuario, totalPedido, latitud, longitud]
         );
         const id_pedido = pedidoResult.insertId;
         
-        // Crear detalles y actualizar stock
         for (const item of carrito) {
             const subtotal = item.precio * item.cantidad;
             
@@ -430,28 +561,36 @@ app.post('/crearPedido', verificarUsuario, async (req, res) => {
             );
         }
         
-        // Vaciar carrito
+        const nuevoSaldo = fondosActuales - totalPedido;
+        await connection.query(
+            'UPDATE usuarios SET fondos = ? WHERE id_usuario = ?',
+            [nuevoSaldo, id_usuario]
+        );
+        
+        await connection.query(
+            'INSERT INTO transacciones_fondos (id_usuario, tipo, monto, saldo_anterior, saldo_nuevo, descripcion) VALUES (?, ?, ?, ?, ?, ?)',
+            [id_usuario, 'compra', totalPedido, fondosActuales, nuevoSaldo, `Compra - Pedido #${id_pedido}`]
+        );
+        
         await connection.query('DELETE FROM carrito_items WHERE id_usuario = ?', [id_usuario]);
         
         await connection.commit();
         
         res.json({
             mensaje: 'Pedido creado exitosamente',
-            id_pedido: id_pedido
+            id_pedido: id_pedido,
+            nuevo_saldo: nuevoSaldo
         });
     
     } catch (err) {
         if (connection) await connection.rollback();
-        console.log('Error en transacción /crearPedido:', err.message);
+        console.error('Error en transacción /crearPedido:', err.message);
         res.status(500).json({ error: 'Error al procesar el pedido' });
     } finally {
         if (connection) connection.release();
     }
 });
-
-// --- RUTA ACTUALIZADA: OBTENER PEDIDOS ---
 app.get('/obtenerPedidos', verificarAdmin, async (req, res) => {
-    // Agregado latitud y longitud a la consulta
     const query = `SELECT 
     p.id_pedido, p.fecha, p.total, p.estado, p.latitud, p.longitud,
     u.nombre as nombre_usuario, u.email
@@ -515,6 +654,41 @@ app.put('/cambiarEstadoPedido/:id', verificarAdmin, async (req, res) => {
     } catch (err) {
         console.log('Error cambiando estado pedido:', err.message);
         return res.status(500).json({error: 'Error al actualizar estado'});
+    }
+});
+
+app.get('/obtenerTicket/:id_pedido', verificarUsuario, async (req, res) => {
+    const { id_pedido } = req.params;
+    const id_usuario = req.session.usuario.id;
+    
+    try {
+        const [pedido] = await con.query(
+            `SELECT p.*, u.nombre as nombre_usuario, u.email
+             FROM pedidos p
+             JOIN usuarios u ON p.id_usuario = u.id_usuario
+             WHERE p.id_pedido = ? AND p.id_usuario = ?`,
+            [id_pedido, id_usuario]
+        );
+        
+        if (pedido.length === 0) {
+            return res.status(404).json({ error: 'Pedido no encontrado' });
+        }
+            const [detalles] = await con.query(
+            `SELECT dp.*, pr.nombre as nombre_producto, pr.img
+             FROM detalle_pedidos dp
+             JOIN productos pr ON dp.id_producto = pr.id_producto
+             WHERE dp.id_pedido = ?`,
+            [id_pedido]
+        );
+        
+        res.json({
+            pedido: pedido[0],
+            detalles: detalles
+        });
+        
+    } catch (err) {
+        console.error('Error obteniendo ticket:', err.message);
+        res.status(500).json({ error: 'Error al obtener ticket' });
     }
 });
 

@@ -37,32 +37,53 @@ function actualizarDisplayFondos() {
 async function agregarFondos(monto) {
     const btn = document.getElementById('btn-agregar-fondos');
     if (!btn) {
-        console.error('Botón de agregar fondos no encontrado.');
+        console.error('Boton de agregar fondos no encontrado');
         return;
     }
     const textoOriginal = btn.textContent;
     btn.disabled = true;
     btn.textContent = 'Procesando...';
+    
+    if (isNaN(monto) || monto <= 0) {
+        alert('El monto ingresado deber ser mayor a 0');
+        btn.disabled = false;
+        btn.textContent = textoOriginal;
+        return;
+    }
+    if (monto > 999999999999) {
+        alert('El monto excede el limite permitido (999,999,999,999)');
+        btn.disabled = false;
+        btn.textContent = textoOriginal;
+        return;
+    }
+    
+    console.log('Agregando fondos:', monto);
+    
     try {
         const response = await fetch('/agregarFondos', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ monto: monto })
+            body: JSON.stringify({ monto: parseFloat(monto) })
         });
+        
         const data = await response.json();
+        
+        console.log('Respuesta del servidor:', data);
+        
         if (response.ok) {
             saldoActual = parseFloat(data.fondos);
             actualizarDisplayFondos();
             const inputMonto = document.getElementById('input-monto');
             if (inputMonto) inputMonto.value = '';
-            mostrarNotificacion('✅ Fondos agregados exitosamente');
+            mostrarNotificacion(`Fondos agregados! +$${parseFloat(data.monto_agregado || monto).toFixed(2)}`);
             cargarHistorialTransacciones();
         } else {
-            alert('❌ ' + data.error);
+            console.error('Error del servidor:', data.error);
+            alert(data.error);
         }
     } catch (error) {
-        console.error('Error:', error);
-        alert('Error de conexión');
+        console.error('Error de conexión:', error);
+        alert('Error de conexión con el servidor');
     } finally {
         btn.disabled = false;
         btn.textContent = textoOriginal;
@@ -85,7 +106,7 @@ async function cargarHistorialTransacciones() {
             div.style.cssText = 'padding: 15px; background: white; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid ' +
                 (t.tipo === 'deposito' ? '#4CAF50' : '#f44336');
             const fecha = new Date(t.fecha).toLocaleString('es-MX');
-            const icono = t.tipo === 'deposito' ? '💰' : '🛒';
+            const icono = t.tipo === 'deposito' ? 'dinero' : 'compra';
             const signo = t.tipo === 'deposito' ? '+' : '-';
             const color = t.tipo === 'deposito' ? '#4CAF50' : '#f44336';
             div.innerHTML = `
@@ -113,11 +134,11 @@ async function cargarHistorialTransacciones() {
 function abrirModalFondos() {
     const modalFondos = document.getElementById('modal-fondos');
     if (!modalFondos) {
-        console.error('Modal de fondos no encontrado.');
+        console.error('Modal de fondos no encontrado');
         return;
     }
     if (!usuarioActual) {
-        alert('Debes iniciar sesión para usar esta función');
+        alert('Necesitas iniciar sesion para hacer eso');
         window.location.href = '/login.html';
         return;
     }
@@ -169,7 +190,7 @@ async function mostrarTicket(idPedido) {
         });
         const ticketHTML = `
             <div style="text-align: center; margin-bottom: 20px;">
-                <h2 style="margin: 0; color: #8B4513;">🍞 La DesEsperanza</h2>
+                <h2 style="margin: 0; color: #8B4513;">La DesEsperanza</h2>
                 <p style="margin: 5px 0; font-size: 14px;">Panadería Artesanal</p>
                 <p style="margin: 5px 0; font-size: 12px;">RFC: DESXXX010101XXX</p>
             </div>
@@ -211,9 +232,9 @@ async function mostrarTicket(idPedido) {
                 </div>
             </div>
             <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #666;">
-                <p>¡Gracias por su compra!</p>
+                <p>Gracias por su compra!</p>
                 <p>Pedido #${pedido.id_pedido}</p>
-                ${pedido.latitud && pedido.longitud ? '<p>📍 Entrega programada</p>' : ''}
+                ${pedido.latitud && pedido.longitud ? '<p>Entrega programada</p>' : ''}
             </div>
         `;
         contenidoTicket.innerHTML = ticketHTML;
@@ -368,7 +389,7 @@ function crearCardProducto(producto) {
     const nombreCategoria = categoria ? categoria.nombre : 'Sin categoría';
     const imagenHTML = producto.img
         ? `<img src="${producto.img}" alt="${producto.nombre}" class="producto-imagen">`
-        : '<div class="producto-imagen-placeholder" style="display: flex; align-items: center; justify-content: center; height: 100%; color: #999;">Sin imagen</div>';
+        : '<div class="producto-imagen-placeholder" style="background: #e0e0e0; display: flex; align-items: center; justify-content: center; color: #999;">Sin imagen</div>';
     const stockDisponible = producto.stock > 0;
     const textoStock = stockDisponible
         ? `Stock: ${producto.stock}`
@@ -569,14 +590,14 @@ async function confirmarPedidoFinal() {
         return;
     }
     if (saldoActual < total) {
-        if (confirm(`❌ Fondos insuficientes.\n\nTienes: $${saldoActual.toFixed(2)}\nNecesitas: $${total.toFixed(2)}\n\n¿Deseas recargar fondos?`)) {
+        if (confirm(`Fondos insuficientes.\n\nTienes: $${saldoActual.toFixed(2)}\nNecesitas: $${total.toFixed(2)}\n\n¿Deseas recargar fondos?`)) {
             cerrarModalCarrito();
             abrirModalFondos();
         }
         return;
     }
     if (saldoActual === 0) {
-        if (confirm('❌ No tienes fondos disponibles.\n\n¿Deseas recargar tu cuenta?')) {
+        if (confirm('No tienes fondos disponibles.\n\n¿Deseas recargar fondos?')) {
             cerrarModalCarrito();
             abrirModalFondos();
         }
@@ -609,11 +630,11 @@ async function confirmarPedidoFinal() {
             volverALista();
             mostrarTicket(data.id_pedido);
         } else {
-            alert('❌ Error: ' + data.error);
+            alert('Error: ' + data.error);
         }
     } catch (error) {
         console.error('Error al finalizar compra:', error);
-        alert('❌ Error de conexión.');
+        alert('Error de conexión.');
     } finally {
         btnConfirmar.disabled = false;
         btnConfirmar.textContent = 'Confirmar Pedido';
@@ -649,10 +670,10 @@ function abrirModalCuenta() {
                 <p><strong>Rol:</strong> ${usuarioActual.rol === 'admin' ? 'Administrador' : 'Cliente'}</p>
                 <p><strong>Fondos Disponibles:</strong> <span style="color: #4CAF50; font-size: 20px; font-weight: bold;">$${saldoActual.toFixed(2)}</span></p>
                 <button class="btn-login" onclick="abrirModalFondos(); cerrarModalCuenta();" style="background: #4CAF50;">
-                    💰 Gestionar Fondos
+                    Gestionar Fondos
                 </button>
                 <button class="btn-login" onclick="verMisPedidos()">
-                    📦 Mis Pedidos
+                    Mis Pedidos
                 </button>
                 ${usuarioActual.rol === 'admin' ? '<button class="btn-login" onclick="irAPanelAdmin()">Ir al Panel de Admin</button>' : ''}
                 <button class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</button>
@@ -674,32 +695,108 @@ function abrirModalCuenta() {
 
 async function verMisPedidos() {
     cerrarModalCuenta();
+    
+    const modal = document.getElementById('modal-mis-pedidos');
+    const contenedor = document.getElementById('contenedor-mis-pedidos');
+    
+    modal.classList.add('active');
+    
+    contenedor.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">Cargando pedidos...</p>';
+    
     try {
         const response = await fetch('/misPedidos');
         const pedidos = await response.json();
-        if (pedidos.length === 0) {
-            alert('No tienes pedidos aún');
+        
+        if (!response.ok) {
+            contenedor.innerHTML = `
+                <div style="text-align: center; padding: 60px 20px;">
+                    <p style="color: #f44336; font-size: 18px;">Error al cargar pedidos</p>
+                </div>
+            `;
             return;
         }
-        let html = 'MIS PEDIDOS:\n\n';
-        pedidos.forEach(p => {
-            const fecha = new Date(p.fecha).toLocaleDateString('es-MX');
-            html += `Pedido #${p.id_pedido}\n`;
-            html += `Fecha: ${fecha}\n`;
-            html += `Total: $${parseFloat(p.total).toFixed(2)}\n`;
-            html += `Estado: ${p.estado.toUpperCase()}\n`;
-            html += `------------------------\n`;
-        });
-        if (confirm(html + '\n¿Deseas ver el ticket de algún pedido?')) {
-            const idPedido = prompt('Ingresa el número de pedido:');
-            if (idPedido) {
-                mostrarTicket(parseInt(idPedido));
-            }
+        
+        if (pedidos.length === 0) {
+            contenedor.innerHTML = `
+                <div style="text-align: center; padding: 60px 20px;">
+                    <p style="color: #999; font-size: 18px; margin-bottom: 10px;">No tienes pedidos aún</p>
+                    <p style="color: #999; font-size: 14px;">¡Comienza a comprar para ver tus pedidos aquí!</p>
+                </div>
+            `;
+            return;
         }
+        
+        let html = '<div style="display: grid; gap: 20px;">';
+        
+        pedidos.forEach(pedido => {
+            const fecha = new Date(pedido.fecha);
+            const fechaFormateada = fecha.toLocaleDateString('es-MX', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            let badgeColor = '#ffc107';
+            let badgeText = pedido.estado.toUpperCase();
+            if (pedido.estado === 'entregado' || pedido.estado === 'completado') {
+                badgeColor = '#4CAF50';
+            }
+            if (pedido.estado === 'cancelado') {
+                badgeColor = '#f44336';
+            }
+            if (pedido.estado === 'en_camino') {
+                badgeColor = '#2196F3';
+                badgeText = 'EN CAMINO';
+            }
+            
+            html += `
+                <div style="background: white; padding: 25px; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border-left: 5px solid #8B4513;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px; flex-wrap: wrap; gap: 15px;">
+                        <div style="flex: 1; min-width: 250px;">
+                            <h3 style="margin: 0 0 10px 0; color: #8B4513; font-size: 24px;">Pedido #${pedido.id_pedido}</h3>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <p style="margin: 0; color: #666; display: flex; align-items: center; gap: 8px;">
+                                    <span>${fechaFormateada}</span>
+                                </p>
+                                <p style="margin: 0; color: #666; display: flex; align-items: center; gap: 8px;">
+                                    <span>Total: <strong style="color: #4CAF50; font-size: 20px;">$${parseFloat(pedido.total).toFixed(2)}</strong></span>
+                                </p>
+                            </div>
+                        </div>
+                        <span style="padding: 10px 20px; background: ${badgeColor}; color: white; border-radius: 25px; font-size: 14px; font-weight: 700; letter-spacing: 0.5px; white-space: nowrap; align-self: start;">
+                            ${badgeText}
+                        </span>
+                    </div>
+                    <button 
+                        onclick="mostrarTicket(${pedido.id_pedido})"
+                        style="width: 100%; padding: 14px; background: #8B4513; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 16px; transition: all 0.3s;"
+                        onmouseover="this.style.background='#A0522D'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(139,69,19,0.3)'"
+                        onmouseout="this.style.background='#8B4513'; this.style.transform='translateY(0)'; this.style.boxShadow='none'"
+                    >
+                        Ver Ticket Completo
+                    </button>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        contenedor.innerHTML = html;
+        
     } catch (error) {
-        console.error('Error:', error);
-        alert('Error al cargar pedidos');
+        console.error('Error al cargar pedidos:', error);
+        contenedor.innerHTML = `
+            <div style="text-align: center; padding: 60px 20px;">
+                <p style="color: #f44336; font-size: 18px; margin-bottom: 10px;">Error de conexión</p>
+                <p style="color: #999; font-size: 14px;">No se pudieron cargar los pedidos. Verifica tu conexión.</p>
+            </div>
+        `;
     }
+}
+
+function cerrarModalMisPedidos() {
+    document.getElementById('modal-mis-pedidos').classList.remove('active');
 }
 
 function cerrarModalCuenta() {
@@ -800,21 +897,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (btnAgregarFondos) {
         btnAgregarFondos.addEventListener('click', () => {
             const monto = parseFloat(document.getElementById('input-monto').value);
-            if (isNaN(monto) || monto <= 0) {
-                alert('Por favor ingresa un monto válido');
-                return;
+            if (!isNaN(monto) && monto > 0) { 
+                agregarFondos(monto);
+            } else {
+                 alert('Por favor ingresa un monto válido');
             }
-            if (monto > 999999999999) {
-                alert('El monto excede el límite permitido (999,999,999,999)');
-                return;
-            }
-            agregarFondos(monto);
         });
     }
     document.querySelectorAll('.btn-monto-rapido').forEach(btn => {
         btn.addEventListener('click', () => {
             const monto = parseFloat(btn.dataset.monto);
-            agregarFondos(monto);
+            agregarFondos(monto); 
         });
     });
     const inputMonto = document.getElementById('input-monto');
@@ -847,6 +940,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(modalTicket) {
         modalTicket.addEventListener('click', (e) => {
             if (e.target.id === 'modal-ticket') cerrarModalTicket();
+        });
+    }
+
+    const btnMisPedidos = document.getElementById('btn-mis-pedidos');
+    if (btnMisPedidos) {
+        btnMisPedidos.addEventListener('click', () => {
+            if (!usuarioActual) {
+                alert('Debes iniciar sesión para ver tus pedidos');
+                window.location.href = '/login.html';
+                return;
+            }
+            verMisPedidos();
+        });
+    }
+    const btnCerrarMisPedidos = document.getElementById('cerrar-mis-pedidos');
+    if (btnCerrarMisPedidos) {
+        btnCerrarMisPedidos.addEventListener('click', cerrarModalMisPedidos);
+    }
+
+    const modalMisPedidos = document.getElementById('modal-mis-pedidos');
+    if (modalMisPedidos) {
+        modalMisPedidos.addEventListener('click', (e) => {
+            if (e.target.id === 'modal-mis-pedidos') {
+                cerrarModalMisPedidos();
+            }
         });
     }
 });

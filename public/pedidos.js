@@ -277,7 +277,6 @@ async function cerrarSesion() {
     }
 }
 
-
 function mostrarNotificacion(mensaje) {
     const notif = document.createElement('div');
     notif.style.cssText = `

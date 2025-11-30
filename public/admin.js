@@ -1,4 +1,4 @@
-// ============ AUTENTICACIÓN ============
+let usuarioActual = null;
 
 async function verificarAutenticacion() {
     try {
@@ -10,7 +10,6 @@ async function verificarAutenticacion() {
             return false;
         }
         
-        // Mostrar nombre del usuario si existe el elemento
         const nombreUsuario = document.getElementById('nombre-usuario');
         if (nombreUsuario) {
             nombreUsuario.textContent = `Hola, ${data.usuario.nombre}`;
@@ -23,23 +22,20 @@ async function verificarAutenticacion() {
         return false;
     }
 }
+
 function irAPedidos() {
     window.location.href = '/pedidos.html';
 }
-// ============ CATEGORÍAS ============
 
 function cargarCategorias() {
-    console.log('Intentando cargar categorías...');
     fetch('/obtenerCategorias')
         .then(respuesta => {
-            console.log('Respuesta categorías:', respuesta.status);
             if (!respuesta.ok) {
                 throw new Error(`HTTP error! status: ${respuesta.status}`);
             }
             return respuesta.json();
         })
         .then(categorias => {
-            console.log('Categorías obtenidas:', categorias);
             let selectCategoria = document.getElementById('campo-categoria');
             if (selectCategoria) {
                 selectCategoria.innerHTML = '<option value="">Seleccionar categoría</option>';
@@ -53,11 +49,9 @@ function cargarCategorias() {
             }
         })
         .catch(error => {
-            console.error('Error al cargar categorías:', error);
+            console.error('Error al cargar categorias:', error);
         });
 }
-
-// ============ PRODUCTOS ============
 
 function agregarFilaTabla(producto) {
     let cuerpoTabla = document.getElementById('cuerpo-tabla');
@@ -89,17 +83,14 @@ function agregarFilaTabla(producto) {
 }
 
 function cargarProductos() {
-    console.log('Intentando cargar productos...');
     fetch('/obtenerProductos')
         .then(respuesta => {
-            console.log('Respuesta recibida:', respuesta.status);
             if (!respuesta.ok) {
                 throw new Error(`HTTP error! status: ${respuesta.status}`);
             }
             return respuesta.json();
         })
         .then(productos => {
-            console.log('Productos obtenidos:', productos);
             let cuerpoTabla = document.getElementById('cuerpo-tabla');
             cuerpoTabla.innerHTML = '';
             
@@ -113,10 +104,10 @@ function cargarProductos() {
         })
         .catch(error => {
             console.error('Error detallado al cargar productos:', error);
-            alert('Error al cargar los productos. Verifica que el servidor esté corriendo');
+            alert('Error al cargar los productos');
             
             let cuerpoTabla = document.getElementById('cuerpo-tabla');
-            cuerpoTabla.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #f44336;">⚠️ Error al cargar productos</td></tr>';
+            cuerpoTabla.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #f44336;">Error al cargar productos</td></tr>';
         });
 }
 
@@ -127,7 +118,6 @@ function guardarProducto(formData) {
     })
     .then(respuesta => respuesta.json())
     .then(productoCreado => {
-        console.log('Producto creado:', productoCreado);
         agregarFilaTabla(productoCreado);
         document.getElementById('modal-formulario').classList.remove('activo');
         document.getElementById('formulario-pan').reset();
@@ -146,7 +136,6 @@ function eliminarProducto(id) {
     })
     .then(respuesta => respuesta.json())
     .then(resultado => {
-        console.log('Producto eliminado:', resultado);
         let fila = document.querySelector(`tr[data-id="${id}"]`);
         if (fila) fila.remove();
         
@@ -166,7 +155,6 @@ function editarProducto(id, formData) {
     })
     .then(respuesta => respuesta.json())
     .then(productoActualizado => {
-        console.log('Producto actualizado:', productoActualizado);
         cargarProductos();
         
         document.getElementById('modal-formulario').classList.remove('activo');
@@ -181,7 +169,6 @@ function editarProducto(id, formData) {
 }
 
 function abrirModalEditar(id) {
-    console.log('Abriendo modal para editar:', id);
     fetch('/obtenerProductos')
         .then(respuesta => respuesta.json())
         .then(productos => {
@@ -217,7 +204,6 @@ function abrirModalEditar(id) {
 }
 
 function confirmarEliminar(id) {
-    console.log('Confirmando eliminación de:', id);
     document.getElementById('modal-eliminar').classList.add('activo');
     document.getElementById('confirmar-eliminar').onclick = () => eliminarProducto(id);
 }
@@ -241,10 +227,7 @@ function mostrarPreviewImagen(input) {
     }
 }
 
-// ============ INICIALIZAR ============
-
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('DOM cargado');
     
     const autenticado = await verificarAutenticacion();
     if (!autenticado) return;
@@ -252,7 +235,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     cargarCategorias();
     cargarProductos();
     
-    // Preview de imagen
     let inputImagen = document.getElementById('campo-img');
     if (inputImagen) {
         inputImagen.addEventListener('change', function() {
@@ -260,11 +242,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
     
-    // Botón agregar
     let botonAgregar = document.getElementById('agregarProducto');
     if (botonAgregar) {
         botonAgregar.addEventListener('click', () => {
-            console.log('Click en agregar');
             document.getElementById('titulo-formulario').textContent = 'Agregar Nuevo Producto';
             document.getElementById('formulario-pan').reset();
             document.getElementById('formulario-pan').dataset.id = '';
@@ -303,7 +283,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
     
-    // Cerrar modales
     let botonCancelar = document.getElementById('boton-cancelar');
     if (botonCancelar) {
         botonCancelar.addEventListener('click', () => {
@@ -319,7 +298,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
     
-    // Cerrar sesión
     let botonSesion = document.getElementById('boton-sesion');
     if (botonSesion) {
         botonSesion.addEventListener('click', async () => {
@@ -327,7 +305,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await fetch('/logout', { method: 'POST' });
                 window.location.href = '/login.html';
             } catch (error) {
-                console.error('Error al cerrar sesión:', error);
+                console.error('Error al cerrar sesion:', error);
             }
         });
     }

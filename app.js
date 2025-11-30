@@ -15,7 +15,6 @@ const server = http.createServer(app);
 const io = socketIO(server);
 
 app.set('trust proxy', 1);
-
 app.engine('ejs', engine);
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -45,7 +44,6 @@ async function crearTablasPedidos() {
             longitud DECIMAL(11, 8) NULL,
             FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
         )`;
-
         const tablaDetalle = `CREATE TABLE IF NOT EXISTS detalle_pedidos (
             id_detalle INT PRIMARY KEY AUTO_INCREMENT,
             id_pedido INT NOT NULL,
@@ -55,12 +53,10 @@ async function crearTablasPedidos() {
             subtotal DECIMAL(10,2) NOT NULL,
             FOREIGN KEY (id_pedido) REFERENCES pedidos(id_pedido)
         )`;
-        
-        // Se añade la tabla de transacciones de fondos
         const tablaTransaccionesFondos = `CREATE TABLE IF NOT EXISTS transacciones_fondos (
             id_transaccion INT PRIMARY KEY AUTO_INCREMENT,
             id_usuario INT NOT NULL,
-            tipo VARCHAR(50) NOT NULL, -- 'deposito' o 'compra'
+            tipo VARCHAR(50) NOT NULL,
             monto DECIMAL(15,2) NOT NULL,
             saldo_anterior DECIMAL(15,2) NOT NULL,
             saldo_nuevo DECIMAL(15,2) NOT NULL,
@@ -68,18 +64,14 @@ async function crearTablasPedidos() {
             descripcion VARCHAR(255),
             FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
         )`;
-
         await con.query(tablaPedidos);
         await con.query(tablaDetalle);
         await con.query(tablaTransaccionesFondos);
-
-        // Se verifica si la columna 'fondos' existe en la tabla 'usuarios'
         const [columnasUsuarios] = await con.query(`SHOW COLUMNS FROM usuarios LIKE 'fondos'`);
         if (columnasUsuarios.length === 0) {
             await con.query(`ALTER TABLE usuarios ADD fondos DECIMAL(15,2) DEFAULT 0.00`);
             console.log(' Columna "fondos" añadida a la tabla "usuarios".');
         }
-
     } catch (err) {
         console.log(' Error creando tablas de pedidos/transacciones:', err.message);
     }
@@ -101,7 +93,7 @@ async function inicializarApp() {
     try {
         const [rows] = await con.query('SELECT 1 as connected');
         console.log(' Conectado a la BD');
-        await crearTablasPedidos(); // Se llama primero para asegurar que las tablas y columnas existan
+        await crearTablasPedidos();
         await insertarCategoriasIniciales();
     } catch (err) {
         console.log(' Error en inicialización:', err.message);
@@ -155,7 +147,6 @@ app.use(session({
     }
 }));
 
-// Middleware para proteger rutas de admin
 function verificarAdmin(req, res, next) {
     if (req.session.usuario && req.session.usuario.rol === 'admin') {
         next();
@@ -164,7 +155,6 @@ function verificarAdmin(req, res, next) {
     }
 }
 
-// Middleware para verificar usuario autenticado
 function verificarUsuario(req, res, next) {
     if (req.session.usuario) {
         next();
@@ -173,13 +163,11 @@ function verificarUsuario(req, res, next) {
     }
 }
 
-// --- RUTAS ADICIONALES DEL LEAFLET ---
 try {
     app.use(require('./routes/index'));
 } catch (e) {
     console.log("Advertencia: No se encontró ./routes/index para Leaflet, continuando sin él.");
 }
-// -------------------------------------
 
 // ============ RUTAS DE AUTENTICACIÓN ============
 app.post('/login', async (req, res) => {
@@ -217,7 +205,7 @@ app.post('/register', async (req, res) => {
             [email]
         );
         if (resultado.length > 0) {
-            return res.status(400).json({error: 'El email ya está registrado'});
+            return res.status(400).json({error: 'El email ya esta registrado'});
         }
         const [resultadoInsert] = await con.query(
             'INSERT INTO usuarios (nombre, email, password, rol) VALUES (?, ?, ?, ?)',
@@ -380,90 +368,88 @@ app.delete('/vaciarMiCarrito', verificarUsuario, async (req, res) => {
         res.json({ mensaje: 'Carrito vaciado' });
     } catch (err) {
         console.error("Error al vaciar carrito:", err.message);
-        res.status(500).json({ error: "Error al vaciar carrito" });
+        res.status(500).json({ error: "Error al vaciar el carrito" });
     }
 });
 
+// ============ RUTAS DE FONDOS ============
 app.get('/obtenerFondos', verificarUsuario, async (req, res) => {
     const id_usuario = req.session.usuario.id;
-    
     try {
         const [resultado] = await con.query(
             'SELECT fondos FROM usuarios WHERE id_usuario = ?',
             [id_usuario]
         );
-        
         if (resultado.length === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
-        
         res.json({ fondos: resultado[0].fondos });
     } catch (err) {
         console.error('Error obteniendo fondos:', err.message);
-        res.status(500).json({ error: 'Error al obtener fondos' });
+        res.status(500).json({ error: 'Error al obtener los fondos' });
     }
 });
 
 app.post('/agregarFondos', verificarUsuario, async (req, res) => {
     const id_usuario = req.session.usuario.id;
     let { monto } = req.body;
-    
+    console.log('Agregar fondos - Usuario:', id_usuario, 'Monto:', monto);
     monto = parseFloat(monto);
-    
     if (isNaN(monto) || monto <= 0) {
-        return res.status(400).json({ error: 'Monto inválido' });
+        console.log('Monto invalido');
+        return res.status(400).json({ error: 'El monto ingresado debe ser mayor a 0' });
     }
-    
     if (monto > 999999999999) {
-        return res.status(400).json({ error: 'El monto excede el límite permitido' });
+        console.log('El monto excede el limite');
+        return res.status(400).json({ error: 'El monto excede el limite permitido (999,999,999,999)' });
     }
-    
     let connection;
     try {
         connection = await con.getConnection();
         await connection.beginTransaction();
-        
+        console.log('Obteniendo saldo actual...');
         const [usuario] = await connection.query(
             'SELECT fondos FROM usuarios WHERE id_usuario = ? FOR UPDATE',
             [id_usuario]
         );
-        
         if (usuario.length === 0) {
             await connection.rollback();
+            console.log('Error: Usuario no encontrado');
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
-        
-        const saldoAnterior = parseFloat(usuario[0].fondos);
+        const saldoAnterior = parseFloat(usuario[0].fondos || 0);
         const saldoNuevo = saldoAnterior + monto;
-        
+        console.log('Saldo anterior:', saldoAnterior, 'Saldo nuevo:', saldoNuevo);
         if (saldoNuevo > 999999999999) {
             await connection.rollback();
+            console.log('Excede el limite de fondos');
             return res.status(400).json({ 
-                error: 'No se puede agregar esa cantidad. Excede el límite de fondos permitido (999,999,999,999)' 
+                error: `No se puede agregar esa cantidad poque excede el limite de fondos permitido.\nTienes: $${saldoAnterior.toFixed(2)}\nIntentando agregar: $${monto.toFixed(2)}\nNuevo saldo sería: $${saldoNuevo.toFixed(2)}\nLímite: $999,999,999,999.00` 
             });
         }
-        
-        await connection.query(
+        console.log('Actualizando fondos...');
+        const [updateResult] = await connection.query(
             'UPDATE usuarios SET fondos = ? WHERE id_usuario = ?',
             [saldoNuevo, id_usuario]
         );
-        
+        console.log('Fondos actualizados. Rows affected:', updateResult.affectedRows);
+        console.log('Registrando transaccion...');
         await connection.query(
             'INSERT INTO transacciones_fondos (id_usuario, tipo, monto, saldo_anterior, saldo_nuevo, descripcion) VALUES (?, ?, ?, ?, ?, ?)',
             [id_usuario, 'deposito', monto, saldoAnterior, saldoNuevo, 'Depósito de fondos']
         );
-        
         await connection.commit();
-        
+        console.log('Transacción completada con exito');
         res.json({
             mensaje: 'Fondos agregados exitosamente',
-            fondos: saldoNuevo
+            fondos: saldoNuevo,
+            monto_agregado: monto,
+            saldo_anterior: saldoAnterior
         });
-        
     } catch (err) {
         if (connection) await connection.rollback();
-        console.error('Error agregando fondos:', err.message);
-        res.status(500).json({ error: 'Error al agregar fondos' });
+        console.error('Error agregando fondos:', err);
+        res.status(500).json({ error: 'Error al agregar fondos: ' + err.message });
     } finally {
         if (connection) connection.release();
     }
@@ -471,13 +457,11 @@ app.post('/agregarFondos', verificarUsuario, async (req, res) => {
 
 app.get('/obtenerTransacciones', verificarUsuario, async (req, res) => {
     const id_usuario = req.session.usuario.id;
-    
     try {
         const [transacciones] = await con.query(
             'SELECT * FROM transacciones_fondos WHERE id_usuario = ? ORDER BY fecha DESC LIMIT 50',
             [id_usuario]
         );
-        
         res.json(transacciones);
     } catch (err) {
         console.error('Error obteniendo transacciones:', err.message);
@@ -485,6 +469,7 @@ app.get('/obtenerTransacciones', verificarUsuario, async (req, res) => {
     }
 });
 
+// ============ RUTAS DE PEDIDOS ============
 app.post('/crearPedido', verificarUsuario, async (req, res) => {
     const { carrito, total, latitud, longitud } = req.body;
     const id_usuario = req.session.usuario.id;
@@ -590,6 +575,7 @@ app.post('/crearPedido', verificarUsuario, async (req, res) => {
         if (connection) connection.release();
     }
 });
+
 app.get('/obtenerPedidos', verificarAdmin, async (req, res) => {
     const query = `SELECT 
     p.id_pedido, p.fecha, p.total, p.estado, p.latitud, p.longitud,
@@ -673,7 +659,7 @@ app.get('/obtenerTicket/:id_pedido', verificarUsuario, async (req, res) => {
         if (pedido.length === 0) {
             return res.status(404).json({ error: 'Pedido no encontrado' });
         }
-            const [detalles] = await con.query(
+        const [detalles] = await con.query(
             `SELECT dp.*, pr.nombre as nombre_producto, pr.img
              FROM detalle_pedidos dp
              JOIN productos pr ON dp.id_producto = pr.id_producto
@@ -708,12 +694,12 @@ app.get('/', (req, res) => {
 try {
     require('./sockets')(io);
 } catch (e) {
-    console.log("Advertencia: No se encontró el archivo ./sockets.js, los sockets no responderán.");
+    console.log("No se encontro sockets.js");
 }
 
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
-    console.log(`Servidor corriendo en puerto ${PORT}`);
+    console.log(`Servidor corriendo en puerto ${PORT} http://localhost:3000`);
     console.log(`Entorno: ${process.env.NODE_ENV || 'development'}`);
 });

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Pedidos - La DesEsperanza</title>
     <link rel="stylesheet" href="pedidoscss.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <header>
@@ -22,22 +23,69 @@
     </header>
     
     <div class="container">
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-label">Total de Pedidos</div>
-                <div class="stat-value" id="stat-total">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Pedidos Pendientes</div>
-                <div class="stat-value" id="stat-pendientes">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Pedidos Completados</div>
-                <div class="stat-value" id="stat-completados">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Ingresos Totales</div>
-                <div class="stat-value" id="stat-ingresos">$0.00</div>
+        <div class="graficos-section">
+            <h2 class="section-title">Graficos de Ventas</h2>
+            
+            <div class="graficos-grid">
+                <div class="grafico-card">
+                    <h3>Ventas por Categoría</h3>
+                    <div class="chart-container">
+                        <canvas id="chartCategorias"></canvas>
+                    </div>
+                    <div class="chart-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Total Vendido:</span>
+                            <span class="stat-value" id="total-categorias">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grafico-card">
+                    <h3>Estado de Pedidos</h3>
+                    <div class="chart-container">
+                        <canvas id="chartEstados"></canvas>
+                    </div>
+                    <div class="chart-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Total Pedidos:</span>
+                            <span class="stat-value" id="total-pedidos">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grafico-card grafico-full">
+                    <h3>Top 5 Productos Mas Vendidos</h3>
+                    <div class="chart-container">
+                        <canvas id="chartProductos"></canvas>
+                    </div>
+                    <div class="chart-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Productos Vendidos:</span>
+                            <span class="stat-value" id="total-productos">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Clientes Únicos:</span>
+                            <span class="stat-value" id="total-clientes">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grafico-card grafico-full">
+                    <h3>Ventas Últimos 7 Días</h3>
+                    <div class="chart-container">
+                        <canvas id="chartVentasDiarias"></canvas>
+                    </div>
+                    <div class="chart-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Ingresos (7 días):</span>
+                            <span class="stat-value" id="ingresos-semana">$0.00</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Promedio Diario:</span>
+                            <span class="stat-value" id="promedio-dia">$0.00</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         

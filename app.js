@@ -38,7 +38,7 @@ async function crearTablasPedidos() {
             id_pedido INT PRIMARY KEY AUTO_INCREMENT,
             id_usuario INT NOT NULL,
             fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            total DECIMAL(10,2) NOT NULL,
+            total DECIMAL(15,2) NOT NULL,
             estado VARCHAR(50) DEFAULT 'pendiente',
             latitud DECIMAL(10, 8) NULL,
             longitud DECIMAL(11, 8) NULL,
@@ -50,7 +50,7 @@ async function crearTablasPedidos() {
             id_producto INT NOT NULL,
             cantidad INT NOT NULL,
             precio_unitario DECIMAL(10,2) NOT NULL,
-            subtotal DECIMAL(10,2) NOT NULL,
+            subtotal DECIMAL(15,2) NOT NULL,
             FOREIGN KEY (id_pedido) REFERENCES pedidos(id_pedido)
         )`;
         const tablaTransaccionesFondos = `CREATE TABLE IF NOT EXISTS transacciones_fondos (
@@ -67,10 +67,20 @@ async function crearTablasPedidos() {
         await con.query(tablaPedidos);
         await con.query(tablaDetalle);
         await con.query(tablaTransaccionesFondos);
+        // Ajuste en el tipo de dato de total en pedidos (de 10,2 a 15,2 para ser consistente con fondos)
+        await con.query(`ALTER TABLE pedidos MODIFY total DECIMAL(15,2) NOT NULL`);
+        // Ajuste en el tipo de dato de subtotal en detalle_pedidos (de 10,2 a 15,2 para ser consistente con fondos)
+        await con.query(`ALTER TABLE detalle_pedidos MODIFY subtotal DECIMAL(15,2) NOT NULL`);
         const [columnasUsuarios] = await con.query(`SHOW COLUMNS FROM usuarios LIKE 'fondos'`);
         if (columnasUsuarios.length === 0) {
             await con.query(`ALTER TABLE usuarios ADD fondos DECIMAL(15,2) DEFAULT 0.00`);
             console.log(' Columna "fondos" añadida a la tabla "usuarios".');
+        }
+        // Se añade la columna username a usuarios si no existe
+        const [columnasUsername] = await con.query(`SHOW COLUMNS FROM usuarios LIKE 'username'`);
+        if (columnasUsername.length === 0) {
+            await con.query(`ALTER TABLE usuarios ADD username VARCHAR(50) UNIQUE NULL AFTER nombre`);
+            console.log(' Columna "username" añadida a la tabla "usuarios".');
         }
     } catch (err) {
         console.log(' Error creando tablas de pedidos/transacciones:', err.message);
@@ -102,7 +112,48 @@ async function inicializarApp() {
 
 inicializarApp();
 
-// ============ CONFIGURACIÓN DE MULTER ============
+function validarNumero(valor, min, max, nombre) {
+    const num = parseFloat(valor);
+    if (isNaN(num)) {
+        return { valido: false, error: `${nombre} debe ser un número válido` };
+    }
+    if (num < min) {
+        return { valido: false, error: `${nombre} no puede ser menor a ${min}` };
+    }
+    if (num > max) {
+        return { valido: false, error: `${nombre} excede el límite permitido (${max})` };
+    }
+    return { valido: true, valor: num };
+}
+
+function validarEntero(valor, min, max, nombre) {
+    const num = parseInt(valor);
+    if (isNaN(num) || !Number.isInteger(parseFloat(valor))) {
+        return { valido: false, error: `${nombre} debe ser un número entero` };
+    }
+    if (num < min) {
+        return { valido: false, error: `${nombre} no puede ser menor a ${min}` };
+    }
+    if (num > max) {
+        return { valido: false, error: `${nombre} excede el límite permitido (${max})` };
+    }
+    return { valido: true, valor: num };
+}
+
+function validarTexto(valor, minLen, maxLen, nombre) {
+    const texto = String(valor || '').trim();
+    if (!texto) {
+        return { valido: false, error: `${nombre} es requerido` };
+    }
+    if (texto.length < minLen) {
+        return { valido: false, error: `${nombre} debe tener al menos ${minLen} caracteres` };
+    }
+    if (texto.length > maxLen) {
+        return { valido: false, error: `${nombre} no puede tener más de ${maxLen} caracteres` };
+    }
+    return { valido: true, valor: texto };
+}
+
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, 'public/images/')
@@ -127,7 +178,6 @@ const upload = multer({
     }
 });
 
-// ============ MIDDLEWARES ============
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -169,24 +219,38 @@ try {
     console.log("Advertencia: No se encontró ./routes/index para Leaflet, continuando sin él.");
 }
 
-// ============ RUTAS DE AUTENTICACIÓN ============
 app.post('/login', async (req, res) => {
-    let {email, password} = req.body;
+    let {username, password} = req.body; 
+    
+    const validUsername = validarTexto(username, 3, 50, 'Nombre de usuario');
+    if (!validUsername.valido) {
+        return res.status(400).json({error: validUsername.error});
+    }
+    username = validUsername.valor;
+    
+    if (!password || password.length < 6 || password.length > 255) {
+        return res.status(400).json({error: 'Contraseña inválida'});
+    }
+    
     try {
         const [resultado] = await con.query(
-            'SELECT * FROM usuarios WHERE email = ? AND password = ?',
-            [email, password]
+            'SELECT * FROM usuarios WHERE username = ? AND password = ?',
+            [username, password]
         );
+        
         if (resultado.length === 0) {
-            return res.status(401).json({error: 'Credenciales incorrectas'});
+            return res.status(401).json({error: 'Usuario o contraseña incorrectos'});
         }
+        
         let usuario = resultado[0];
         req.session.usuario = {
             id: usuario.id_usuario,
             nombre: usuario.nombre,
+            username: usuario.username,
             email: usuario.email,
             rol: usuario.rol
         };
+        
         res.json({
             mensaje: 'Login exitoso',
             usuario: req.session.usuario
@@ -198,19 +262,61 @@ app.post('/login', async (req, res) => {
 });
 
 app.post('/register', async (req, res) => {
-    let {nombre, email, password} = req.body;
+    let {nombre, username, email, password} = req.body;
+    
+    const validNombre = validarTexto(nombre, 2, 100, 'Nombre');
+    if (!validNombre.valido) {
+        return res.status(400).json({error: validNombre.error});
+    }
+    nombre = validNombre.valor;
+    
+    const validUsername = validarTexto(username, 3, 50, 'Nombre de usuario');
+    if (!validUsername.valido) {
+        return res.status(400).json({error: validUsername.error});
+    }
+    username = validUsername.valor;
+    
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        return res.status(400).json({error: 'El nombre de usuario solo puede contener letras, números y guiones bajos'});
+    }
+    
+    email = String(email || '').trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({error: 'Email inválido'});
+    }
+    if (email.length > 100) {
+        return res.status(400).json({error: 'Email demasiado largo'});
+    }
+    
+    if (!password || password.length < 6) {
+        return res.status(400).json({error: 'La contraseña debe tener al menos 6 caracteres'});
+    }
+    if (password.length > 255) {
+        return res.status(400).json({error: 'La contraseña es demasiado larga'});
+    }
+    
     try {
-        const [resultado] = await con.query(
+        const [resultadoEmail] = await con.query(
             'SELECT * FROM usuarios WHERE email = ?',
             [email]
         );
-        if (resultado.length > 0) {
-            return res.status(400).json({error: 'El email ya esta registrado'});
+        if (resultadoEmail.length > 0) {
+            return res.status(400).json({error: 'El email ya está registrado'});
         }
-        const [resultadoInsert] = await con.query(
-            'INSERT INTO usuarios (nombre, email, password, rol) VALUES (?, ?, ?, ?)',
-            [nombre, email, password, 'cliente']
+        
+        const [resultadoUsername] = await con.query(
+            'SELECT * FROM usuarios WHERE username = ?',
+            [username]
         );
+        if (resultadoUsername.length > 0) {
+            return res.status(400).json({error: 'El nombre de usuario ya está en uso'});
+        }
+        
+        const [resultadoInsert] = await con.query(
+            'INSERT INTO usuarios (nombre, username, email, password, rol) VALUES (?, ?, ?, ?, ?)',
+            [nombre, username, email, password, 'cliente']
+        );
+        
         res.json({
             mensaje: 'Usuario registrado exitosamente',
             id_usuario: resultadoInsert.insertId
@@ -241,7 +347,6 @@ app.get('/verificarSesion', (req, res) => {
     }
 });
 
-// ============ RUTAS DE PRODUCTOS ============
 app.get('/obtenerProductos', async (req, res) => {
     try {
         const [resultado] = await con.query('SELECT * FROM productos');
@@ -255,6 +360,36 @@ app.get('/obtenerProductos', async (req, res) => {
 app.post('/agregarProducto', verificarAdmin, upload.single('imagen'), async (req, res) => {
     let {nombre, descripcion, precio, stock, id_categoria} = req.body;
     let img = req.file ? `/images/${req.file.filename}` : null;
+    
+    const validNombre = validarTexto(nombre, 2, 100, 'Nombre del producto');
+    if (!validNombre.valido) {
+        return res.status(400).json({error: validNombre.error});
+    }
+    nombre = validNombre.valor;
+    
+    const validDesc = validarTexto(descripcion, 5, 500, 'Descripción');
+    if (!validDesc.valido) {
+        return res.status(400).json({error: validDesc.error});
+    }
+    descripcion = validDesc.valor;
+    
+    const validPrecio = validarNumero(precio, 0.01, 999999999, 'Precio');
+    if (!validPrecio.valido) {
+        return res.status(400).json({error: validPrecio.error});
+    }
+    precio = validPrecio.valor;
+    
+    const validStock = validarEntero(stock, 0, 999999999, 'Stock');
+    if (!validStock.valido) {
+        return res.status(400).json({error: validStock.error});
+    }
+    stock = validStock.valor;
+    
+    const validCategoria = validarEntero(id_categoria, 1, 999999, 'Categoría');
+    if (!validCategoria.valido) {
+        return res.status(400).json({error: validCategoria.error});
+    }
+    id_categoria = validCategoria.valor;
     
     try {
         const [resultado] = await con.query(
@@ -276,6 +411,42 @@ app.put('/editarProducto/:id', verificarAdmin, upload.single('imagen'), async (r
     let {nombre, descripcion, precio, stock, id_categoria, img_actual} = req.body;
     let img = req.file ? `/images/${req.file.filename}` : img_actual;
     
+    const validId = validarEntero(id, 1, 999999999, 'ID del producto');
+    if (!validId.valido) {
+        return res.status(400).json({error: validId.error});
+    }
+    id = validId.valor;
+    
+    const validNombre = validarTexto(nombre, 2, 100, 'Nombre del producto');
+    if (!validNombre.valido) {
+        return res.status(400).json({error: validNombre.error});
+    }
+    nombre = validNombre.valor;
+    
+    const validDesc = validarTexto(descripcion, 5, 500, 'Descripción');
+    if (!validDesc.valido) {
+        return res.status(400).json({error: validDesc.error});
+    }
+    descripcion = validDesc.valor;
+    
+    const validPrecio = validarNumero(precio, 0.01, 999999999, 'Precio');
+    if (!validPrecio.valido) {
+        return res.status(400).json({error: validPrecio.error});
+    }
+    precio = validPrecio.valor;
+    
+    const validStock = validarEntero(stock, 0, 999999999, 'Stock');
+    if (!validStock.valido) {
+        return res.status(400).json({error: validStock.error});
+    }
+    stock = validStock.valor;
+    
+    const validCategoria = validarEntero(id_categoria, 1, 999999, 'Categoría');
+    if (!validCategoria.valido) {
+        return res.status(400).json({error: validCategoria.error});
+    }
+    id_categoria = validCategoria.valor;
+    
     try {
         await con.query(
             'UPDATE productos SET nombre = ?, descripcion = ?, precio = ?, stock = ?, img = ?, id_categoria = ? WHERE id_producto = ?',
@@ -284,14 +455,23 @@ app.put('/editarProducto/:id', verificarAdmin, upload.single('imagen'), async (r
         res.json({id_producto: id, nombre, descripcion, precio, stock, img, id_categoria});
     } catch (err) {
         console.log('Error editando producto:', err.message);
-        return res.status(500).json({error: 'Error al editar producto'});
+        return res.status(400).json({error: 'Error al editar producto'});
     }
 });
 
 app.delete('/eliminarProducto/:id', verificarAdmin, async (req, res) => {
     let {id} = req.params;
+    const validId = validarEntero(id, 1, 999999999, 'ID del producto');
+    if (!validId.valido) {
+        return res.status(400).json({error: validId.error});
+    }
+    id = validId.valor;
+    
     try {
-        await con.query('DELETE FROM productos WHERE id_producto = ?', [id]);
+        const [resultado] = await con.query('DELETE FROM productos WHERE id_producto = ?', [id]);
+        if (resultado.affectedRows === 0) {
+            return res.status(404).json({error: 'Producto no encontrado'});
+        }
         res.json({id_producto: id, mensaje: 'Eliminado'});
     } catch (err) {
         console.log('Error eliminando producto:', err.message);
@@ -299,7 +479,6 @@ app.delete('/eliminarProducto/:id', verificarAdmin, async (req, res) => {
     }
 });
 
-// ============ RUTAS DE CATEGORÍAS ============
 app.get('/obtenerCategorias', async (req, res) => {
     try {
         const [resultado] = await con.query('SELECT * FROM categorias');
@@ -310,7 +489,6 @@ app.get('/obtenerCategorias', async (req, res) => {
     }
 });
 
-// ============ RUTAS DE CARRITO ============
 app.get('/miCarrito', verificarUsuario, async (req, res) => {
     const id_usuario = req.session.usuario.id;
     const query = `SELECT p.*, ci.cantidad
@@ -329,13 +507,38 @@ WHERE ci.id_usuario = ?`;
 
 app.post('/agregarAlCarrito', verificarUsuario, async (req, res) => {
     const id_usuario = req.session.usuario.id;
-    const { id_producto, cantidad } = req.body;
+    let { id_producto, cantidad } = req.body;
     
-    const query = `INSERT INTO carrito_items (id_usuario, id_producto, cantidad)
-VALUES (?, ?, ?)
-ON DUPLICATE KEY UPDATE cantidad = ?`;
+    const validIdProducto = validarEntero(id_producto, 1, 999999999, 'ID del producto');
+    if (!validIdProducto.valido) {
+        return res.status(400).json({error: validIdProducto.error});
+    }
+    id_producto = validIdProducto.valor;
+    
+    const validCantidad = validarEntero(cantidad, 1, 999999, 'Cantidad');
+    if (!validCantidad.valido) {
+        return res.status(400).json({error: validCantidad.error});
+    }
+    cantidad = validCantidad.valor;
     
     try {
+        const [producto] = await con.query(
+            'SELECT stock FROM productos WHERE id_producto = ?',
+            [id_producto]
+        );
+        
+        if (producto.length === 0) {
+            return res.status(404).json({error: 'Producto no encontrado'});
+        }
+        
+        if (producto[0].stock < cantidad) {
+            return res.status(400).json({error: `Stock insuficiente. Solo quedan ${producto[0].stock} unidades`});
+        }
+        
+        const query = `INSERT INTO carrito_items (id_usuario, id_producto, cantidad)
+VALUES (?, ?, ?)
+ON DUPLICATE KEY UPDATE cantidad = ?`;
+        
         await con.query(query, [id_usuario, id_producto, cantidad, cantidad]);
         res.json({ mensaje: 'Producto agregado/actualizado en el carrito' });
     } catch (err) {
@@ -348,10 +551,15 @@ app.delete('/eliminarDelCarrito/:id_producto', verificarUsuario, async (req, res
     const id_usuario = req.session.usuario.id;
     const { id_producto } = req.params;
     
+    const validIdProducto = validarEntero(id_producto, 1, 999999999, 'ID del producto');
+    if (!validIdProducto.valido) {
+        return res.status(400).json({error: validIdProducto.error});
+    }
+    
     const query = 'DELETE FROM carrito_items WHERE id_usuario = ? AND id_producto = ?';
     
     try {
-        await con.query(query, [id_usuario, id_producto]);
+        await con.query(query, [id_usuario, validIdProducto.valor]);
         res.json({ mensaje: 'Producto eliminado del carrito' });
     } catch (err) {
         console.error("Error al eliminar del carrito:", err.message);
@@ -372,7 +580,6 @@ app.delete('/vaciarMiCarrito', verificarUsuario, async (req, res) => {
     }
 });
 
-// ============ RUTAS DE FONDOS ============
 app.get('/obtenerFondos', verificarUsuario, async (req, res) => {
     const id_usuario = req.session.usuario.id;
     try {
@@ -393,53 +600,54 @@ app.get('/obtenerFondos', verificarUsuario, async (req, res) => {
 app.post('/agregarFondos', verificarUsuario, async (req, res) => {
     const id_usuario = req.session.usuario.id;
     let { monto } = req.body;
-    console.log('Agregar fondos - Usuario:', id_usuario, 'Monto:', monto);
-    monto = parseFloat(monto);
-    if (isNaN(monto) || monto <= 0) {
-        console.log('Monto invalido');
-        return res.status(400).json({ error: 'El monto ingresado debe ser mayor a 0' });
+    
+    const validMonto = validarNumero(monto, 0.01, 999999999999, 'Monto');
+    if (!validMonto.valido) {
+        return res.status(400).json({error: validMonto.error});
     }
-    if (monto > 999999999999) {
-        console.log('El monto excede el limite');
-        return res.status(400).json({ error: 'El monto excede el limite permitido (999,999,999,999)' });
+    monto = validMonto.valor;
+    
+    if ((monto * 100) % 1 !== 0) {
+        return res.status(400).json({error: 'El monto solo puede tener hasta 2 decimales'});
     }
+    
     let connection;
     try {
         connection = await con.getConnection();
         await connection.beginTransaction();
-        console.log('Obteniendo saldo actual...');
+        
         const [usuario] = await connection.query(
             'SELECT fondos FROM usuarios WHERE id_usuario = ? FOR UPDATE',
             [id_usuario]
         );
+        
         if (usuario.length === 0) {
             await connection.rollback();
-            console.log('Error: Usuario no encontrado');
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
+        
         const saldoAnterior = parseFloat(usuario[0].fondos || 0);
         const saldoNuevo = saldoAnterior + monto;
-        console.log('Saldo anterior:', saldoAnterior, 'Saldo nuevo:', saldoNuevo);
+        
         if (saldoNuevo > 999999999999) {
             await connection.rollback();
-            console.log('Excede el limite de fondos');
             return res.status(400).json({ 
-                error: `No se puede agregar esa cantidad poque excede el limite de fondos permitido.\nTienes: $${saldoAnterior.toFixed(2)}\nIntentando agregar: $${monto.toFixed(2)}\nNuevo saldo sería: $${saldoNuevo.toFixed(2)}\nLímite: $999,999,999,999.00` 
+                error: `No se puede agregar esa cantidad porque excede el límite de fondos permitido.\nTienes: $${saldoAnterior.toFixed(2)}\nIntentando agregar: $${monto.toFixed(2)}\nNuevo saldo sería: $${saldoNuevo.toFixed(2)}\nLímite: $999,999,999,999.00` 
             });
         }
-        console.log('Actualizando fondos...');
-        const [updateResult] = await connection.query(
+        
+        await connection.query(
             'UPDATE usuarios SET fondos = ? WHERE id_usuario = ?',
             [saldoNuevo, id_usuario]
         );
-        console.log('Fondos actualizados. Rows affected:', updateResult.affectedRows);
-        console.log('Registrando transaccion...');
+        
         await connection.query(
             'INSERT INTO transacciones_fondos (id_usuario, tipo, monto, saldo_anterior, saldo_nuevo, descripcion) VALUES (?, ?, ?, ?, ?, ?)',
             [id_usuario, 'deposito', monto, saldoAnterior, saldoNuevo, 'Depósito de fondos']
         );
+        
         await connection.commit();
-        console.log('Transacción completada con exito');
+        
         res.json({
             mensaje: 'Fondos agregados exitosamente',
             fondos: saldoNuevo,
@@ -469,10 +677,39 @@ app.get('/obtenerTransacciones', verificarUsuario, async (req, res) => {
     }
 });
 
-// ============ RUTAS DE PEDIDOS ============
 app.post('/crearPedido', verificarUsuario, async (req, res) => {
     const { carrito, total, latitud, longitud } = req.body;
     const id_usuario = req.session.usuario.id;
+
+    if (!Array.isArray(carrito) || carrito.length === 0) {
+        return res.status(400).json({error: 'El carrito está vacío'});
+    }
+    
+    if (carrito.length > 100) {
+        return res.status(400).json({error: 'El carrito tiene demasiados productos'});
+    }
+    
+    const validTotal = validarNumero(total, 0.01, 999999999999, 'Total');
+    if (!validTotal.valido) {
+        return res.status(400).json({error: validTotal.error});
+    }
+    const totalPedido = validTotal.valor;
+    
+    let lat = null, lng = null;
+    if (latitud !== null && latitud !== undefined && String(latitud).trim() !== '') {
+        const validLat = validarNumero(latitud, -90, 90, 'Latitud');
+        if (!validLat.valido) {
+            return res.status(400).json({error: validLat.error});
+        }
+        lat = validLat.valor;
+    }
+    if (longitud !== null && longitud !== undefined && String(longitud).trim() !== '') {
+        const validLng = validarNumero(longitud, -180, 180, 'Longitud');
+        if (!validLng.valido) {
+            return res.status(400).json({error: validLng.error});
+        }
+        lng = validLng.valor;
+    }
 
     let connection;
     try {
@@ -489,8 +726,14 @@ app.post('/crearPedido', verificarUsuario, async (req, res) => {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
         
-        const fondosActuales = parseFloat(usuario[0].fondos);
-        const totalPedido = parseFloat(total);
+        const fondosActuales = parseFloat(usuario[0].fondos || 0);
+        
+        if (fondosActuales === 0 || fondosActuales < 0.01) {
+            await connection.rollback();
+            return res.status(400).json({ 
+                error: 'No tienes fondos disponibles. Por favor recarga tu cuenta.' 
+            });
+        }
         
         if (fondosActuales < totalPedido) {
             await connection.rollback();
@@ -499,25 +742,33 @@ app.post('/crearPedido', verificarUsuario, async (req, res) => {
             });
         }
         
-        if (fondosActuales === 0) {
-            await connection.rollback();
-            return res.status(400).json({ 
-                error: 'No tienes fondos disponibles. Por favor recarga tu cuenta.' 
-            });
-        }
-        
         let erroresStock = [];
+        let totalCalculado = 0;
         
-        for (const item of carrito) {
+        for (let i = 0; i < carrito.length; i++) {
+            const item = carrito[i];
+            const validId = validarEntero(item.id_producto, 1, 999999999, 'ID del producto');
+            const validCant = validarEntero(item.cantidad, 1, 999999, 'Cantidad');
+            const validPrecio = validarNumero(item.precio, 0.01, 999999999, 'Precio unitario'); // Asumiendo que el precio viene del frontend para el cálculo, pero se verificará el real
+            
+            if (!validId.valido || !validCant.valido || !validPrecio.valido) {
+                erroresStock.push(`Datos inválidos en el ítem ${i + 1} del carrito`);
+                continue;
+            }
+            
             const [productos] = await connection.query(
-                'SELECT nombre, stock FROM productos WHERE id_producto = ? FOR UPDATE', 
-                [item.id_producto]
+                'SELECT nombre, stock, precio FROM productos WHERE id_producto = ? FOR UPDATE', 
+                [validId.valor]
             );
             
             if (productos.length === 0) {
-                erroresStock.push(`Producto ID ${item.id_producto} no encontrado.`);
-            } else if (productos[0].stock < item.cantidad) {
+                erroresStock.push(`Producto ID ${validId.valor} no encontrado.`);
+            } else if (productos[0].stock < validCant.valor) {
                 erroresStock.push(`Stock insuficiente para ${productos[0].nombre} (sólo quedan ${productos[0].stock})`);
+            } else if (Math.abs(productos[0].precio - validPrecio.valor) > 0.01) {
+                erroresStock.push(`Error de precio para ${productos[0].nombre}. Precio actual: $${productos[0].precio}, Enviado: $${validPrecio.valor}`);
+            } else {
+                totalCalculado += validPrecio.valor * validCant.valor;
             }
         }
         
@@ -526,23 +777,30 @@ app.post('/crearPedido', verificarUsuario, async (req, res) => {
             return res.status(400).json({ error: erroresStock.join(', ') });
         }
         
+        if (Math.abs(totalCalculado - totalPedido) > 0.01) {
+            await connection.rollback();
+            return res.status(400).json({ error: `Error en el cálculo del total. Total calculado: $${totalCalculado.toFixed(2)}, Total enviado: $${totalPedido.toFixed(2)}` });
+        }
+        
         const [pedidoResult] = await connection.query(
             'INSERT INTO pedidos (id_usuario, total, latitud, longitud) VALUES (?, ?, ?, ?)',
-            [id_usuario, totalPedido, latitud, longitud]
+            [id_usuario, totalPedido, lat, lng]
         );
         const id_pedido = pedidoResult.insertId;
         
         for (const item of carrito) {
-            const subtotal = item.precio * item.cantidad;
+            const precioUnitario = parseFloat(item.precio);
+            const cantidadItem = parseInt(item.cantidad);
+            const subtotal = precioUnitario * cantidadItem;
             
             await connection.query(
                 'INSERT INTO detalle_pedidos (id_pedido, id_producto, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?)',
-                [id_pedido, item.id_producto, item.cantidad, item.precio, subtotal]
+                [id_pedido, item.id_producto, cantidadItem, precioUnitario, subtotal]
             );
             
             await connection.query(
                 'UPDATE productos SET stock = stock - ? WHERE id_producto = ?',
-                [item.cantidad, item.id_producto]
+                [cantidadItem, item.id_producto]
             );
         }
         
@@ -595,6 +853,12 @@ ORDER BY p.fecha DESC`;
 
 app.get('/obtenerDetallePedido/:id', verificarAdmin, async (req, res) => {
     let {id} = req.params;
+    const validId = validarEntero(id, 1, 999999999, 'ID del pedido');
+    if (!validId.valido) {
+        return res.status(400).json({error: validId.error});
+    }
+    id = validId.valor;
+    
     const query = `SELECT 
     dp.id_detalle, dp.cantidad, dp.precio_unitario, dp.subtotal,
     pr.nombre as nombre_producto, pr.img
@@ -631,11 +895,26 @@ app.put('/cambiarEstadoPedido/:id', verificarAdmin, async (req, res) => {
     let {id} = req.params;
     let {estado} = req.body;
     
+    const validId = validarEntero(id, 1, 999999999, 'ID del pedido');
+    if (!validId.valido) {
+        return res.status(400).json({error: validId.error});
+    }
+    id = validId.valor;
+    
+    const estadosValidos = ['pendiente', 'en_preparacion', 'enviado', 'entregado', 'cancelado'];
+    if (!estado || !estadosValidos.includes(estado.toLowerCase().trim())) {
+        return res.status(400).json({error: 'Estado de pedido inválido'});
+    }
+    estado = estado.toLowerCase().trim();
+    
     try {
-        await con.query(
+        const [resultado] = await con.query(
             'UPDATE pedidos SET estado = ? WHERE id_pedido = ?',
             [estado, id]
         );
+        if (resultado.affectedRows === 0) {
+            return res.status(404).json({error: 'Pedido no encontrado'});
+        }
         res.json({mensaje: 'Estado actualizado', id_pedido: id, estado});
     } catch (err) {
         console.log('Error cambiando estado pedido:', err.message);
@@ -647,13 +926,18 @@ app.get('/obtenerTicket/:id_pedido', verificarUsuario, async (req, res) => {
     const { id_pedido } = req.params;
     const id_usuario = req.session.usuario.id;
     
+    const validIdPedido = validarEntero(id_pedido, 1, 999999999, 'ID del pedido');
+    if (!validIdPedido.valido) {
+        return res.status(400).json({error: validIdPedido.error});
+    }
+    
     try {
         const [pedido] = await con.query(
             `SELECT p.*, u.nombre as nombre_usuario, u.email
              FROM pedidos p
              JOIN usuarios u ON p.id_usuario = u.id_usuario
              WHERE p.id_pedido = ? AND p.id_usuario = ?`,
-            [id_pedido, id_usuario]
+            [validIdPedido.valor, id_usuario]
         );
         
         if (pedido.length === 0) {
@@ -664,7 +948,7 @@ app.get('/obtenerTicket/:id_pedido', verificarUsuario, async (req, res) => {
              FROM detalle_pedidos dp
              JOIN productos pr ON dp.id_producto = pr.id_producto
              WHERE dp.id_pedido = ?`,
-            [id_pedido]
+            [validIdPedido.valor]
         );
         
         res.json({

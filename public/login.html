@@ -10,7 +10,7 @@
     <div class="container">
         <div class="banner">
             <h1>La DesEsperanza</h1>
-            <p>Una Panaderia Para El Proyecto</p>
+            <p>Una Panadería Para El Proyecto</p>
         </div>
 
         <div class="form-container">
@@ -20,9 +20,9 @@
 
             <form id="form-login">
                 <div class="form-group">
-                    <label for="email">Correo Electrónico</label>
-                    <input type="email" id="email" name="email" required>
-                    <span class="error-field" id="error-email"></span>
+                    <label for="username">Nombre de Usuario</label>
+                    <input type="text" id="username" name="username" required minlength="3" maxlength="50">
+                    <span class="error-field" id="error-username"></span>
                 </div>
 
                 <div class="form-group">
@@ -43,7 +43,6 @@
     </div>
 
     <script>
-        // Verificar si ya hay sesión activa
         fetch('/verificarSesion')
             .then(res => res.json())
             .then(data => {
@@ -52,16 +51,21 @@
                 }
             });
 
-        // Validaciones en tiempo real
-        document.getElementById('email').addEventListener('blur', function() {
-            const email = this.value.trim();
-            const errorSpan = document.getElementById('error-email');
+        document.getElementById('username').addEventListener('blur', function() {
+            const username = this.value.trim();
+            const errorSpan = document.getElementById('error-username');
             
-            if (!email) {
-                errorSpan.textContent = 'El email es requerido';
+            if (!username) {
+                errorSpan.textContent = 'El nombre de usuario es requerido';
                 errorSpan.style.display = 'block';
-            } else if (!validarEmail(email)) {
-                errorSpan.textContent = 'Email inválido';
+            } else if (username.length < 3) {
+                errorSpan.textContent = 'Debe tener al menos 3 caracteres';
+                errorSpan.style.display = 'block';
+            } else if (username.length > 50) {
+                errorSpan.textContent = 'No puede tener más de 50 caracteres';
+                errorSpan.style.display = 'block';
+            } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+                errorSpan.textContent = 'Solo letras, números y guiones bajos';
                 errorSpan.style.display = 'block';
             } else {
                 errorSpan.style.display = 'none';
@@ -75,30 +79,35 @@
             if (!password) {
                 errorSpan.textContent = 'La contraseña es requerida';
                 errorSpan.style.display = 'block';
+            } else if (password.length < 6) {
+                errorSpan.textContent = 'Debe tener al menos 6 caracteres';
+                errorSpan.style.display = 'block';
             } else {
                 errorSpan.style.display = 'none';
             }
         });
 
-        // Manejar login
         document.getElementById('form-login').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const email = document.getElementById('email').value.trim();
+            const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
             
-            // Validaciones antes de enviar
-            if (!email || !validarEmail(email)) {
-                mostrarError('Por favor ingresa un email válido');
+            if (!username || username.length < 3 || username.length > 50) {
+                mostrarError('Por favor ingresa un nombre de usuario válido (3-50 caracteres)');
                 return;
             }
             
-            if (!password) {
-                mostrarError('Por favor ingresa tu contraseña');
+            if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+                mostrarError('El nombre de usuario solo puede contener letras, números y guiones bajos');
                 return;
             }
             
-            // Deshabilitar botón
+            if (!password || password.length < 6) {
+                mostrarError('Por favor ingresa tu contraseña (mínimo 6 caracteres)');
+                return;
+            }
+            
             const btnLogin = document.getElementById('btn-login');
             btnLogin.disabled = true;
             btnLogin.textContent = 'Iniciando...';
@@ -107,7 +116,7 @@
                 const response = await fetch('/login', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({email, password})
+                    body: JSON.stringify({username, password})
                 });
                 
                 const data = await response.json();
@@ -126,11 +135,6 @@
                 btnLogin.textContent = 'Iniciar Sesión';
             }
         });
-
-        function validarEmail(email) {
-            const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return regex.test(email);
-        }
 
         function redirigirSegunRol(rol) {
             if (rol === 'admin') {

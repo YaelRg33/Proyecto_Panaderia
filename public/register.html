@@ -22,6 +22,13 @@
             </div>
 
             <div class="form-group">
+                <label for="username">Nombre de Usuario</label>
+                <input type="text" id="username" name="username" required minlength="3" maxlength="50">
+                <span class="error-field" id="error-username"></span>
+                <small class="help-text">Solo letras, números y guiones bajos (_)</small>
+            </div>
+
+            <div class="form-group">
                 <label for="email">Correo Electrónico</label>
                 <input type="email" id="email" name="email" required>
                 <span class="error-field" id="error-email"></span>
@@ -47,7 +54,6 @@
     </div>
 
     <script>
-        // Validaciones en tiempo real
         document.getElementById('nombre').addEventListener('blur', function() {
             const nombre = this.value.trim();
             const errorSpan = document.getElementById('error-nombre');
@@ -60,6 +66,27 @@
                 errorSpan.style.display = 'block';
             } else if (nombre.length > 100) {
                 errorSpan.textContent = 'El nombre no puede tener más de 100 caracteres';
+                errorSpan.style.display = 'block';
+            } else {
+                errorSpan.style.display = 'none';
+            }
+        });
+
+        document.getElementById('username').addEventListener('blur', function() {
+            const username = this.value.trim();
+            const errorSpan = document.getElementById('error-username');
+            
+            if (!username) {
+                errorSpan.textContent = 'El nombre de usuario es requerido';
+                errorSpan.style.display = 'block';
+            } else if (username.length < 3) {
+                errorSpan.textContent = 'Debe tener al menos 3 caracteres';
+                errorSpan.style.display = 'block';
+            } else if (username.length > 50) {
+                errorSpan.textContent = 'No puede tener más de 50 caracteres';
+                errorSpan.style.display = 'block';
+            } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+                errorSpan.textContent = 'Solo se permiten letras, números y guiones bajos';
                 errorSpan.style.display = 'block';
             } else {
                 errorSpan.style.display = 'none';
@@ -95,7 +122,6 @@
                 errorSpan.style.display = 'none';
             }
             
-            // Validar confirmación si ya tiene valor
             validarConfirmacion();
         });
 
@@ -118,13 +144,23 @@
             e.preventDefault();
             
             const nombre = document.getElementById('nombre').value.trim();
+            const username = document.getElementById('username').value.trim();
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const passwordConfirm = document.getElementById('password-confirm').value;
             
-            // Validaciones
             if (!nombre || nombre.length < 2 || nombre.length > 100) {
                 mostrarError('El nombre debe tener entre 2 y 100 caracteres');
+                return;
+            }
+            
+            if (!username || username.length < 3 || username.length > 50) {
+                mostrarError('El nombre de usuario debe tener entre 3 y 50 caracteres');
+                return;
+            }
+            
+            if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+                mostrarError('El nombre de usuario solo puede contener letras, números y guiones bajos');
                 return;
             }
             
@@ -143,7 +179,6 @@
                 return;
             }
             
-            // Deshabilitar botón
             const btnRegister = document.getElementById('btn-register');
             btnRegister.disabled = true;
             btnRegister.textContent = 'Registrando...';
@@ -152,7 +187,7 @@
                 const response = await fetch('/register', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({nombre, email, password})
+                    body: JSON.stringify({nombre, username, email, password})
                 });
                 
                 const data = await response.json();

@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Header -->
     <header class="encabezado">
         <div class="contenedor-encabezado">
             <div class="nombre-panaderia">
@@ -15,21 +14,17 @@
                 <span>Panel de Administración</span>
             </div>
             <nav class="navegacion-admin">
-                <button class="boton-nav" id="boton-algo">algo</button>
+                <span class="user-greeting" id="nombre-usuario">Cargando...</span>
                 <button class="boton-nav" id="boton-pedidos" onclick="irAPedidos()">Ver Pedidos</button>
                 <button class="boton-nav" id="boton-sesion">Cerrar Sesión</button>
             </nav>
         </div>
     </header>
-
-    <!-- Contenedor Principal -->
     <main class="contenedor-principal">
         <div class="titulo-seccion">
             <h1>Catalogo de Panes</h1>
             <button class="boton-agregar" id="agregarProducto">Agregar Nuevo Pan</button>
         </div>
-
-        <!-- Tabla de panes -->
         <div class="tabla-panes">
             <table class="tabla" id="tabla-catalogo">
                 <thead>
@@ -44,13 +39,10 @@
                     </tr>
                 </thead>
                 <tbody id="cuerpo-tabla">
-                    <!-- Las filas se cargan aquí dinámicamente -->
                 </tbody>
             </table>
         </div>
     </main>
-
-    <!-- Modal para Agregar/Editar -->
     <div class="modal" id="modal-formulario">
         <div class="contenido-modal">
             <h2 class="titulo-modal" id="titulo-formulario">Agregar Nuevo Producto</h2>
@@ -87,7 +79,6 @@
                     <div style="display: flex; flex-direction: column; gap: 10px;">
                         <input type="file" id="campo-img" class="campo-archivo" accept="image/*">
                         <div id="preview-imagen" style="margin-top: 10px;">
-                            <!-- La vista previa aparecerá aquí -->
                         </div>
                     </div>
                 </div>
@@ -100,7 +91,6 @@
         </div>
     </div>
 
-    <!-- Modal para Confirmar Eliminación -->
     <div class="modal" id="modal-eliminar">
         <div class="contenido-modal">
             <h2 class="titulo-modal">¿Eliminar Producto?</h2>
